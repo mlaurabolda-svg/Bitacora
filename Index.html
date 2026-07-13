@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bitácora de Viaje</title>
+<style>
+:root{
+  --night:#16262c;
+  --night-2:#1e363f;
+  --paper:#f6f3ea;
+  --paper-dim:#e8e2d0;
+  --stamp:#b23a2e;
+  --stamp-dark:#8f2c22;
+  --gold:#c9973e;
+  --ink:#22201b;
+  --ink-soft:#5b564a;
+  --line:#d8cfb8;
+  --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', 'Times New Roman', serif;
+  --mono: 'SFMono-Regular', 'JetBrains Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;height:100%;background:var(--night);}
+body{
+  font-family:var(--sans);
+  color:var(--ink);
+  overflow-x:hidden;
+}
+#app{
+  max-width:560px;
+  margin:0 auto;
+  min-height:100vh;
+  background:var(--paper);
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+
+/* ---------- HEADER ---------- */
+header.top{
+  background:var(--night);
+  color:var(--paper);
+  padding:22px 20px 26px;
+  position:relative;
+  overflow:hidden;
+}
+header.top::after{
+  content:"";
+  position:absolute; left:0; right:0; bottom:-1px; height:14px;
+  background:
+    radial-gradient(circle at 10px 0, transparent 9px, var(--night) 9.5px) repeat-x;
+  background-size:20px 14px;
+  transform:translateY(1px);
+}
+header.top .eyebrow{
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:.18em;
+  text-transform:uppercase;
+  color:var(--gold);
+  margin-bottom:6px;
+}
+header.top h1{
+  font-family:var(--serif);
+  font-weight:700;
+  font-size:28px;
+  margin:0;
+  line-height:1.15;
+}
+header.top h1[contenteditable="true"]{
+  outline:none;
+  border-bottom:1px dashed rgba(246,243,234,.35);
+  cursor:text;
+}
+header.top .sub{
+  font-family:var(--mono);
+  font-size:12px;
+  color:rgba(246,243,234,.65);
+  margin-top:8px;
+}
+
+/* ---------- TABS ---------- */
+nav.tabs{
+  display:flex;
+  background:var(--paper);
+  border-bottom:1px solid var(--line);
+  position:sticky; top:0; z-index:20;
+}
+nav.tabs button{
+  flex:1;
+  border:none;
+  background:transparent;
+  font-family:var(--mono);
+  font-size:11px;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  padding:13px 4px 11px;
+  color:var(--ink-soft);
+  border-bottom:3px solid transparent;
+  cursor:pointer;
+}
+nav.tabs button.active{
+  color:var(--stamp);
+  border-bottom-color:var(--stamp);
+  font-weight:700;
+}
+
+/* ---------- MAIN ---------- */
+main{
+  flex:1;
+  padding:18px 16px 120px;
+  overflow-y:auto;
+}
+.empty{
+  text-align:center;
+  padding:60px 24px;
+  color:var(--ink-soft);
+  font-family:var(--serif);
+  font-size:16px;
+  line-height:1.6;
+}
+.empty .big{font-size:38px; display:block; margin-bottom:10px;}
+
+/* day divider styled like a passport page tab */
+.day-divider{
+  display:flex;
+  align-items:baseline;
+  gap:10px;
+  margin:26px 0 12px;
+}
+.day-divider:first-child{margin-top:4px;}
+.day-divider .tag{
+  font-family:var(--mono);
+  font-size:11px;
+  background:var(--night);
+  color:var(--paper);
+  padding:4px 9px;
+  border-radius:3px;
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+.day-divider .label{
+  font-family:var(--serif);
+  font-size:17px;
+  color:var(--ink);
+  font-weight:700;
+  text-transform:capitalize;
+}
+.day-divider .line{flex:1; height:1px; background:var(--line);}
+
+/* entry card - "stamped ticket" look */
+.card{
+  background:#fffdf8;
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:13px 14px 12px;
+  margin-bottom:10px;
+  position:relative;
+  box-shadow:0 1px 2px rgba(34,32,27,.04);
+}
+.card .meta{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-family:var(--mono);
+  font-size:11px;
+  color:var(--ink-soft);
+  margin-bottom:7px;
+}
+.card .meta .time{
+  color:var(--stamp);
+  font-weight:700;
+}
+.card .meta .loc{
+  color:var(--ink-soft);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.card .meta .icon{font-size:13px;}
+.card .del{
+  position:absolute; top:8px; right:8px;
+  border:none; background:none; color:var(--line);
+  font-size:15px; cursor:pointer; padding:4px;
+  line-height:1;
+}
+.card .del:hover{color:var(--stamp);}
+.card .text{
+  font-family:var(--serif);
+  font-size:15.5px;
+  line-height:1.5;
+  color:var(--ink);
+  white-space:pre-wrap;
+  padding-right:16px;
+}
+.card audio{width:100%; margin-top:2px; height:34px;}
+.card .transcript{
+  font-family:var(--serif); font-size:14.5px; line-height:1.5;
+  color:var(--ink); margin-top:8px; padding:8px 10px;
+  background:var(--paper); border-left:2px solid var(--gold); border-radius:0 6px 6px 0;
+  white-space:pre-wrap;
+}
+.card .pending-row{
+  display:flex; align-items:center; gap:8px; margin-top:8px;
+  font-family:var(--mono); font-size:11px; color:var(--ink-soft);
+}
+.btn-mini{
+  font-family:var(--mono); font-size:11px; border:1px solid var(--stamp);
+  background:transparent; color:var(--stamp); padding:5px 10px;
+  border-radius:5px; cursor:pointer; text-transform:uppercase; letter-spacing:.04em;
+}
+.btn-mini:disabled{opacity:.45; cursor:default;}
+.pending-banner{
+  background:var(--night); color:var(--paper); border-radius:10px;
+  padding:11px 14px; margin-bottom:14px; display:flex; align-items:center;
+  justify-content:space-between; gap:10px; font-size:13px; font-family:var(--sans);
+}
+.pending-banner .btn-mini{border-color:var(--gold); color:var(--gold);}
+.live-transcript{
+  font-family:var(--serif); font-size:14px; color:var(--ink);
+  background:#fffdf8; border:1px solid var(--line); border-radius:8px;
+  padding:9px 11px; min-height:44px; margin-bottom:12px; white-space:pre-wrap;
+}
+.live-transcript .hint{color:var(--ink-soft); font-style:italic; font-size:13px;}
+.photo-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:5px;
+}
+.photo-grid img{
+  width:100%; height:100px; object-fit:cover;
+  border-radius:6px; background:var(--paper-dim);
+}
+.card .caption{
+  font-family:var(--serif); font-style:italic;
+  font-size:13.5px; color:var(--ink-soft); margin-top:6px;
+}
+
+/* ---------- RESUMEN / FOTOLIBRO ---------- */
+.resumen-day{
+  margin-bottom:30px;
+  page-break-inside:avoid;
+}
+.resumen-day h2{
+  font-family:var(--serif);
+  font-size:19px;
+  border-bottom:2px solid var(--stamp);
+  padding-bottom:5px;
+  margin:0 0 10px;
+  text-transform:capitalize;
+}
+.resumen-day .photo-grid{grid-template-columns:repeat(3,1fr); margin-bottom:8px;}
+.resumen-day .photo-grid img{height:110px;}
+.resumen-day .notes p{
+  font-family:var(--serif);
+  font-size:14.5px;
+  line-height:1.55;
+  margin:0 0 8px;
+  padding-left:10px;
+  border-left:2px solid var(--gold);
+}
+.resumen-day .notes p .t{font-family:var(--mono); font-size:10.5px; color:var(--stamp); display:block; margin-bottom:2px;}
+.resumen-actions{
+  display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap;
+}
+.btn-flat{
+  font-family:var(--mono); font-size:11px; letter-spacing:.05em;
+  border:1px solid var(--night); background:transparent; color:var(--night);
+  padding:8px 12px; border-radius:6px; cursor:pointer; text-transform:uppercase;
+}
+.btn-flat.primary{background:var(--night); color:var(--paper);}
+
+/* ---------- FAB ---------- */
+.fab{
+  position:fixed;
+  bottom:22px; left:50%;
+  transform:translateX(calc(-280px + 16px));
+  z-index:30;
+}
+@media (max-width:560px){
+  .fab{transform:none; right:20px; left:auto;}
+}
+.fab > button{
+  width:58px; height:58px; border-radius:50%;
+  background:var(--stamp); color:#fff; border:none;
+  font-size:28px; box-shadow:0 6px 16px rgba(178,58,46,.4);
+  cursor:pointer; line-height:1;
+}
+.fab-menu{
+  position:absolute; bottom:70px; right:0;
+  display:none; flex-direction:column; gap:8px;
+  align-items:flex-end;
+}
+.fab-menu.open{display:flex;}
+.fab-menu button{
+  display:flex; align-items:center; gap:8px;
+  background:var(--night); color:var(--paper);
+  border:none; padding:10px 16px; border-radius:24px;
+  font-family:var(--sans); font-size:13.5px;
+  box-shadow:0 4px 10px rgba(0,0,0,.25); cursor:pointer;
+  white-space:nowrap;
+}
+.fab-menu button .ic{font-size:16px;}
+
+/* ---------- SHEET / MODAL ---------- */
+.sheet-backdrop{
+  position:fixed; inset:0; background:rgba(22,38,44,.55);
+  display:none; align-items:flex-end; justify-content:center; z-index:50;
+}
+.sheet-backdrop.open{display:flex;}
+.sheet{
+  background:var(--paper); width:100%; max-width:560px;
+  border-radius:16px 16px 0 0; padding:18px 18px 22px;
+  max-height:88vh; overflow-y:auto;
+}
+.sheet h3{
+  font-family:var(--serif); margin:0 0 14px; font-size:19px;
+  display:flex; align-items:center; gap:8px;
+}
+.field{margin-bottom:12px;}
+.field label{
+  display:block; font-family:var(--mono); font-size:10.5px;
+  text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin-bottom:5px;
+}
+.field textarea, .field input[type=text]{
+  width:100%; font-family:var(--serif); font-size:15px;
+  border:1px solid var(--line); border-radius:8px; padding:10px 11px;
+  background:#fffdf8; resize:vertical;
+}
+.field textarea{min-height:100px;}
+.rec-row{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
+.rec-btn{
+  width:56px; height:56px; border-radius:50%; border:none;
+  background:var(--stamp); color:#fff; font-size:22px; cursor:pointer;
+}
+.rec-btn.recording{background:var(--stamp-dark); animation:pulse 1.1s infinite;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(178,58,46,.5);}70%{box-shadow:0 0 0 14px rgba(178,58,46,0);}100%{box-shadow:0 0 0 0 rgba(178,58,46,0);}}
+.rec-status{font-family:var(--mono); font-size:13px; color:var(--ink-soft);}
+.photo-picker{
+  border:1.5px dashed var(--line); border-radius:10px; padding:18px;
+  text-align:center; font-family:var(--mono); font-size:12px; color:var(--ink-soft);
+  cursor:pointer; margin-bottom:12px;
+}
+.preview-strip{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;}
+.preview-strip img, .preview-strip .aud{
+  width:64px; height:64px; object-fit:cover; border-radius:8px; background:var(--paper-dim);
+}
+.sheet-actions{display:flex; gap:10px; margin-top:6px;}
+.sheet-actions button{
+  flex:1; padding:12px; border-radius:8px; border:none;
+  font-family:var(--sans); font-weight:600; font-size:14.5px; cursor:pointer;
+}
+.sheet-actions .cancel{background:var(--paper-dim); color:var(--ink);}
+.sheet-actions .save{background:var(--stamp); color:#fff;}
+
+.toast{
+  position:fixed; bottom:96px; left:50%; transform:translateX(-50%);
+  background:var(--night); color:var(--paper); padding:10px 18px;
+  border-radius:20px; font-size:13px; font-family:var(--sans);
+  opacity:0; pointer-events:none; transition:opacity .25s; z-index:60;
+}
+.toast.show{opacity:1;}
+
+/* ---------- PRINT ---------- */
+@media print{
+  body{background:#fff;}
+  header.top, nav.tabs, .fab, .resumen-actions, .sheet-backdrop{display:none !important;}
+  #app{max-width:none; box-shadow:none;}
+  main{padding:0; overflow:visible;}
+  #view-bitacora, #view-fotos{display:none !important;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <header class="top">
+    <div class="eyebrow">Bitácora de viaje · sin conexión</div>
+    <h1 id="tripName" contenteditable="true">Mi viaje</h1>
+    <div class="sub" id="tripRange">Tocá el título para renombrarlo</div>
+  </header>
+
+  <nav class="tabs">
+    <button data-view="bitacora" class="active">Bitácora</button>
+    <button data-view="fotos">Fotos</button>
+    <button data-view="resumen">Resumen</button>
+  </nav>
+
+  <main>
+    <section id="view-bitacora"></section>
+    <section id="view-fotos" style="display:none"></section>
+    <section id="view-resumen" style="display:none">
+      <div class="resumen-actions">
+        <button class="btn-flat primary" id="btnPrint">🖨️ Exportar / Imprimir PDF</button>
+        <button class="btn-flat" id="btnExport">⬇️ Copia de seguridad</button>
+        <button class="btn-flat" id="btnImport">⬆️ Restaurar copia</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none">
+      </div>
+      <div id="resumenContent"></div>
+    </section>
+  </main>
+
+  <div class="fab">
+    <div class="fab-menu" id="fabMenu">
+      <button data-open="foto"><span class="ic">📷</span> Agregar fotos</button>
+      <button data-open="audio"><span class="ic">🎙️</span> Nota de audio</button>
+      <button data-open="texto"><span class="ic">✍️</span> Nota de texto</button>
+    </div>
+    <button id="fabBtn">+</button>
+  </div>
+
+  <!-- Backdrop / sheets -->
+  <div class="sheet-backdrop" id="backdrop">
+    <div class="sheet" id="sheetTexto" style="display:none">
+      <h3>✍️ Nota de texto</h3>
+      <div class="field"><label>Qué pasó</label><textarea id="textoInput" placeholder="Escribí lo que quieras recordar de este momento..."></textarea></div>
+      <div class="field"><label>Lugar (opcional)</label><input type="text" id="textoLoc" placeholder="Ej: Bariloche, Cerro Campanario"></div>
+      <div class="sheet-actions">
+        <button class="cancel" data-close>Cancelar</button>
+        <button class="save" data-save="texto">Guardar</button>
+      </div>
+    </div>
+
+    <div class="sheet" id="sheetAudio" style="display:none">
+      <h3>🎙️ Nota de audio</h3>
+      <div class="rec-row">
+        <button class="rec-btn" id="recBtn">●</button>
+        <span class="rec-status" id="recStatus">Tocá para grabar</span>
+      </div>
+      <div id="audioPreviewWrap" style="display:none; margin-bottom:12px;">
+        <audio id="audioPreview" controls style="width:100%"></audio>
+      </div>
+      <div class="live-transcript" id="liveTranscript"><span class="hint">Si tenés señal, acá vas a ver la transcripción en vivo mientras hablás. Sin señal, el audio queda guardado como "pendiente" y lo transcribís después.</span></div>
+      <div class="field"><label>Lugar (opcional)</label><input type="text" id="audioLoc" placeholder="Ej: Ruta 40, km 1200"></div>
+      <div class="sheet-actions">
+        <button class="cancel" data-close>Cancelar</button>
+        <button class="save" data-save="audio">Guardar</button>
+      </div>
+    </div>
+
+    <div class="sheet" id="sheetFoto" style="display:none">
+      <h3>📷 Fotos del momento</h3>
+      <div class="photo-picker" id="photoPicker">Tocá para elegir o sacar fotos</div>
+      <input type="file" id="photoInput" accept="image/*" multiple capture="environment" style="display:none">
+      <div class="preview-strip" id="photoPreview"></div>
+      <div class="field"><label>Lugar / pie de foto (opcional)</label><input type="text" id="fotoLoc" placeholder="Ej: Playa Grande al atardecer"></div>
+      <div class="sheet-actions">
+        <button class="cancel" data-close>Cancelar</button>
+        <button class="save" data-save="foto">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= DB ================= */
+let db;
+const DB_NAME = "bitacoraViajeDB";
+const DB_VERSION = 1;
+
+function openDB(){
+  return new Promise((resolve, reject)=>{
+    const req = indexedDB.open(DB_NAME, DB_VERSION);
+    req.onupgradeneeded = (e)=>{
+      const d = e.target.result;
+      if(!d.objectStoreNames.contains("entries")){
+        const s = d.createObjectStore("entries", {keyPath:"id", autoIncrement:true});
+        s.createIndex("ts", "ts");
+      }
+      if(!d.objectStoreNames.contains("photos")){
+        const s2 = d.createObjectStore("photos", {keyPath:"id", autoIncrement:true});
+        s2.createIndex("ts", "ts");
+      }
+    };
+    req.onsuccess = (e)=>{ db = e.target.result; resolve(db); };
+    req.onerror = (e)=> reject(e);
+  });
+}
+
+function txStore(name, mode){
+  return db.transaction(name, mode).objectStore(name);
+}
+function addRecord(store, obj){
+  return new Promise((resolve,reject)=>{
+    const r = txStore(store,"readwrite").add(obj);
+    r.onsuccess = ()=>resolve(r.result);
+    r.onerror = (e)=>reject(e);
+  });
+}
+function getAll(store){
+  return new Promise((resolve,reject)=>{
+    const r = txStore(store,"readonly").getAll();
+    r.onsuccess = ()=>resolve(r.result);
+    r.onerror = (e)=>reject(e);
+  });
+}
+function putRecord(store, obj){
+  return new Promise((resolve,reject)=>{
+    const r = txStore(store,"readwrite").put(obj);
+    r.onsuccess = ()=>resolve(r.result);
+    r.onerror = (e)=>reject(e);
+  });
+}
+function deleteRecord(store, id){
+  return new Promise((resolve,reject)=>{
+    const r = txStore(store,"readwrite").delete(id);
+    r.onsuccess = ()=>resolve();
+    r.onerror = (e)=>reject(e);
+  });
+}
+function clearStore(store){
+  return new Promise((resolve,reject)=>{
+    const r = txStore(store,"readwrite").clear();
+    r.onsuccess = ()=>resolve();
+    r.onerror = (e)=>reject(e);
+  });
+}
+
+/* ================= UTILS ================= */
+function dateKey(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0"), day=String(d.getDate()).padStart(2,"0");
+  return `${y}-${m}-${day}`;
+}
+function fmtTime(d){
+  return d.toLocaleTimeString("es-AR",{hour:"2-digit", minute:"2-digit"});
+}
+function fmtDayLabel(key){
+  const d = new Date(key+"T12:00:00");
+  return d.toLocaleDateString("es-AR",{weekday:"long", day:"numeric", month:"long", year:"numeric"});
+}
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"), 1800);
+}
+function blobToBase64(blob){
+  return new Promise((resolve,reject)=>{
+    const r = new FileReader();
+    r.onload = ()=>resolve(r.result);
+    r.onerror = reject;
+    r.readAsDataURL(blob);
+  });
+}
+function base64ToBlob(dataUrl){
+  const [meta, b64] = dataUrl.split(",");
+  const mime = meta.match(/data:(.*);base64/)[1];
+  const bin = atob(b64);
+  const arr = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) arr[i] = bin.charCodeAt(i);
+  return new Blob([arr], {type:mime});
+}
+
+/* ================= STATE ================= */
+let currentView = "bitacora";
+let pendingPhotos = []; // {file, url}
+let mediaRecorder, audioChunks = [], recordedBlob = null, recStream = null;
+let liveRec = null, liveFinal = "";
+
+function startLiveTranscription(){
+  liveFinal = "";
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const box = document.getElementById("liveTranscript");
+  if(!SR || !navigator.onLine){
+    box.innerHTML = '<span class="hint">' + (navigator.onLine
+      ? 'Este navegador no soporta transcripción en vivo. El audio quedará pendiente para transcribir después.'
+      : 'Sin señal: el audio se guarda igual y queda pendiente para transcribir cuando tengas conexión.') + '</span>';
+    return;
+  }
+  liveRec = new SR();
+  liveRec.lang = "es-AR";
+  liveRec.continuous = true;
+  liveRec.interimResults = true;
+  liveRec.onresult = (e)=>{
+    let interim = "";
+    for(let i=e.resultIndex; i<e.results.length; i++){
+      if(e.results[i].isFinal) liveFinal += e.results[i][0].transcript + " ";
+      else interim += e.results[i][0].transcript;
+    }
+    box.textContent = (liveFinal + interim).trim() || " ";
+  };
+  liveRec.onerror = ()=>{};
+  liveRec.onend = ()=>{
+    // si el usuario sigue grabando, reintentar (Chrome corta solo a veces)
+    if(mediaRecorder && mediaRecorder.state === "recording"){
+      try{ liveRec.start(); }catch(_){}
+    }
+  };
+  try{ liveRec.start(); box.textContent = "Escuchando…"; }catch(_){}
+}
+function stopLiveTranscription(){
+  if(liveRec){ try{ liveRec.onend = null; liveRec.stop(); }catch(_){} liveRec = null; }
+}
+
+/* ================= TRIP NAME ================= */
+const tripNameEl = document.getElementById("tripName");
+tripNameEl.textContent = localStorage.getItem("bitacora_tripName") || "Mi viaje";
+tripNameEl.addEventListener("blur", ()=>{
+  const v = tripNameEl.textContent.trim() || "Mi viaje";
+  tripNameEl.textContent = v;
+  localStorage.setItem("bitacora_tripName", v);
+});
+tripNameEl.addEventListener("keydown", (e)=>{
+  if(e.key === "Enter"){ e.preventDefault(); tripNameEl.blur(); }
+});
+
+/* ================= TABS ================= */
+document.querySelectorAll("nav.tabs button").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    currentView = btn.dataset.view;
+    ["bitacora","fotos","resumen"].forEach(v=>{
+      document.getElementById("view-"+v).style.display = (v===currentView)?"block":"none";
+    });
+    renderAll();
+  });
+});
+
+/* ================= FAB ================= */
+const fabBtn = document.getElementById("fabBtn");
+const fabMenu = document.getElementById("fabMenu");
+fabBtn.addEventListener("click", ()=> fabMenu.classList.toggle("open"));
+document.querySelectorAll("[data-open]").forEach(b=>{
+  b.addEventListener("click", ()=>{
+    fabMenu.classList.remove("open");
+    openSheet(b.dataset.open);
+  });
+});
+
+/* ================= SHEETS ================= */
+const backdrop = document.getElementById("backdrop");
+function openSheet(kind){
+  document.querySelectorAll(".sheet").forEach(s=>s.style.display="none");
+  document.getElementById("sheet"+kind.charAt(0).toUpperCase()+kind.slice(1)).style.display="block";
+  backdrop.classList.add("open");
+}
+function closeSheets(){
+  backdrop.classList.remove("open");
+  // reset texto
+  document.getElementById("textoInput").value="";
+  document.getElementById("textoLoc").value="";
+  // reset audio
+  document.getElementById("audioLoc").value="";
+  document.getElementById("audioPreviewWrap").style.display="none";
+  document.getElementById("recStatus").textContent="Tocá para grabar";
+  document.getElementById("recBtn").classList.remove("recording");
+  recordedBlob = null;
+  stopLiveTranscription();
+  liveFinal = "";
+  document.getElementById("liveTranscript").innerHTML = '<span class="hint">Si tenés señal, acá vas a ver la transcripción en vivo mientras hablás. Sin señal, el audio queda guardado como "pendiente" y lo transcribís después.</span>';
+  if(recStream){ recStream.getTracks().forEach(t=>t.stop()); recStream=null; }
+  // reset foto
+  document.getElementById("fotoLoc").value="";
+  document.getElementById("photoPreview").innerHTML="";
+  pendingPhotos = [];
+}
+backdrop.addEventListener("click",(e)=>{ if(e.target===backdrop) closeSheets(); });
+document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click", closeSheets));
+
+/* ---- Texto save ---- */
+document.querySelector('[data-save="texto"]').addEventListener("click", async ()=>{
+  const text = document.getElementById("textoInput").value.trim();
+  if(!text){ toast("Escribí algo primero"); return; }
+  const loc = document.getElementById("textoLoc").value.trim();
+  const now = new Date();
+  await addRecord("entries", {ts: now.toISOString(), dateKey: dateKey(now), type:"texto", text, loc});
+  toast("Nota guardada");
+  closeSheets();
+  renderAll();
+});
+
+/* ---- Audio record ---- */
+document.getElementById("recBtn").addEventListener("click", async ()=>{
+  const btn = document.getElementById("recBtn");
+  const status = document.getElementById("recStatus");
+  if(!mediaRecorder || mediaRecorder.state !== "recording"){
+    try{
+      recStream = await navigator.mediaDevices.getUserMedia({audio:true});
+    }catch(err){
+      toast("No se pudo acceder al micrófono");
+      return;
+    }
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(recStream);
+    mediaRecorder.ondataavailable = (e)=> audioChunks.push(e.data);
+    mediaRecorder.onstop = ()=>{
+      recordedBlob = new Blob(audioChunks, {type:"audio/webm"});
+      const url = URL.createObjectURL(recordedBlob);
+      document.getElementById("audioPreview").src = url;
+      document.getElementById("audioPreviewWrap").style.display="block";
+      if(recStream){ recStream.getTracks().forEach(t=>t.stop()); recStream=null; }
+    };
+    mediaRecorder.start();
+    startLiveTranscription();
+    btn.classList.add("recording");
+    status.textContent = "Grabando... tocá para detener";
+  } else {
+    mediaRecorder.stop();
+    stopLiveTranscription();
+    btn.classList.remove("recording");
+    status.textContent = "Grabación lista";
+  }
+});
+document.querySelector('[data-save="audio"]').addEventListener("click", async ()=>{
+  if(!recordedBlob){ toast("Grabá una nota primero"); return; }
+  const loc = document.getElementById("audioLoc").value.trim();
+  const now = new Date();
+  const transcript = liveFinal.trim();
+  await addRecord("entries", {
+    ts: now.toISOString(), dateKey: dateKey(now), type:"audio",
+    audioBlob: recordedBlob, loc,
+    transcript: transcript || null,
+    pending: transcript ? false : true
+  });
+  toast(transcript ? "Audio y transcripción guardados" : "Audio guardado (transcripción pendiente)");
+  closeSheets();
+  renderAll();
+});
+
+/* ---- Foto ---- */
+document.getElementById("photoPicker").addEventListener("click", ()=> document.getElementById("photoInput").click());
+document.getElementById("photoInput").addEventListener("change", (e)=>{
+  const files = Array.from(e.target.files || []);
+  files.forEach(file=>{
+    const url = URL.createObjectURL(file);
+    pendingPhotos.push({file, url});
+    const img = document.createElement("img");
+    img.src = url;
+    document.getElementById("photoPreview").appendChild(img);
+  });
+  e.target.value = "";
+});
+document.querySelector('[data-save="foto"]').addEventListener("click", async ()=>{
+  if(pendingPhotos.length === 0){ toast("Elegí al menos una foto"); return; }
+  const loc = document.getElementById("fotoLoc").value.trim();
+  const now = new Date();
+  for(const p of pendingPhotos){
+    await addRecord("photos", {ts: now.toISOString(), dateKey: dateKey(now), blob: p.file, loc});
+  }
+  toast(pendingPhotos.length>1 ? "Fotos guardadas" : "Foto guardada");
+  closeSheets();
+  renderAll();
+});
+
+/* ================= TRANSCRIPCIÓN DIFERIDA (Whisper en el navegador) ================= */
+let whisperPipe = null, whisperLoading = false;
+
+async function getWhisper(statusCb){
+  if(whisperPipe) return whisperPipe;
+  if(whisperLoading){ throw new Error("Ya se está cargando el modelo"); }
+  whisperLoading = true;
+  try{
+    statusCb && statusCb("Descargando modelo de voz (una sola vez, ~40 MB)…");
+    const { pipeline, env } = await import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2");
+    env.allowLocalModels = false;
+    whisperPipe = await pipeline("automatic-speech-recognition", "Xenova/whisper-small", {
+      quantized: true,
+      progress_callback: (p)=>{
+        if(p.status === "progress" && p.progress){
+          statusCb && statusCb("Descargando modelo: " + Math.round(p.progress) + "%");
+        }
+      }
+    });
+    return whisperPipe;
+  } finally {
+    whisperLoading = false;
+  }
+}
+
+async function blobToPCM16k(blob){
+  const arrayBuf = await blob.arrayBuffer();
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const tmpCtx = new AC();
+  const decoded = await tmpCtx.decodeAudioData(arrayBuf);
+  tmpCtx.close();
+  const targetRate = 16000;
+  const length = Math.ceil(decoded.duration * targetRate);
+  const offline = new OfflineAudioContext(1, length, targetRate);
+  const src = offline.createBufferSource();
+  src.buffer = decoded;
+  src.connect(offline.destination);
+  src.start();
+  const rendered = await offline.startRendering();
+  return rendered.getChannelData(0);
+}
+
+async function transcribeEntry(entry, statusCb){
+  const pipe = await getWhisper(statusCb);
+  statusCb && statusCb("Transcribiendo…");
+  const pcm = await blobToPCM16k(entry.audioBlob);
+  const out = await pipe(pcm, {
+    language: "spanish",
+    task: "transcribe",
+    chunk_length_s: 30,
+    stride_length_s: 5
+  });
+  const text = (out && out.text ? out.text : "").trim();
+  entry.transcript = text || "(no se detectó voz)";
+  entry.pending = false;
+  await putRecord("entries", entry);
+  return text;
+}
+
+async function transcribeAllPending(){
+  if(!navigator.onLine && !whisperPipe){
+    toast("Necesitás señal para descargar el modelo la primera vez");
+    return;
+  }
+  const entries = await getAll("entries");
+  const pend = entries.filter(e=>e.type==="audio" && e.pending);
+  if(pend.length===0){ toast("No hay audios pendientes"); return; }
+  const banner = document.getElementById("pendingBannerText");
+  try{
+    for(let i=0;i<pend.length;i++){
+      const setSt = (s)=>{ if(banner) banner.textContent = `(${i+1}/${pend.length}) ${s}`; };
+      await transcribeEntry(pend[i], setSt);
+    }
+    toast("Transcripciones listas");
+  }catch(err){
+    console.error(err);
+    toast("Falló la transcripción. Verificá la conexión y reintentá.");
+  }
+  renderAll();
+}
+
+/* ================= RENDER ================= */
+async function renderAll(){
+  if(currentView === "bitacora") await renderBitacora();
+  else if(currentView === "fotos") await renderFotos();
+  else if(currentView === "resumen") await renderResumen();
+}
+
+async function renderBitacora(){
+  const el = document.getElementById("view-bitacora");
+  const [entries, photos] = await Promise.all([getAll("entries"), getAll("photos")]);
+  const items = [
+    ...entries.map(x=>({...x, kind:x.type})),
+    ...photos.map(x=>({...x, kind:"foto-item"}))
+  ];
+  if(items.length===0){
+    el.innerHTML = `<div class="empty"><span class="big">🧭</span>Todavía no hay entradas.<br>Usá el botón + para sumar tu primera nota, audio o foto.</div>`;
+    return;
+  }
+  // group by dateKey, sort desc by day, asc within day by time
+  const byDay = {};
+  items.forEach(it=>{ (byDay[it.dateKey] = byDay[it.dateKey]||[]).push(it); });
+  const days = Object.keys(byDay).sort().reverse();
+
+  const pendCount = entries.filter(e=>e.type==="audio" && e.pending).length;
+  let html = "";
+  if(pendCount > 0){
+    html += `<div class="pending-banner"><span id="pendingBannerText">🎙️ ${pendCount} audio${pendCount>1?"s":""} pendiente${pendCount>1?"s":""} de transcribir</span><button class="btn-mini" id="btnTransAll">Transcribir</button></div>`;
+  }
+  days.forEach(day=>{
+    const dayItems = byDay[day].sort((a,b)=> a.ts.localeCompare(b.ts));
+    html += `<div class="day-divider"><span class="tag">${day}</span><span class="label">${fmtDayLabel(day)}</span><span class="line"></span></div>`;
+
+    // group consecutive foto-items with same ts+loc into one grid card
+    let i=0;
+    while(i < dayItems.length){
+      const it = dayItems[i];
+      const t = fmtTime(new Date(it.ts));
+      if(it.kind === "foto-item"){
+        const group = [it];
+        let j=i+1;
+        while(j<dayItems.length && dayItems[j].kind==="foto-item" && dayItems[j].ts===it.ts){ group.push(dayItems[j]); j++; }
+        const imgs = group.map(g=>`<img src="${URL.createObjectURL(g.blob)}" data-id="${g.id}">`).join("");
+        html += `<div class="card" data-store="photos" data-idgroup="${group.map(g=>g.id).join(',')}">
+          <div class="meta"><span class="icon">📷</span><span class="time">${t}</span>${it.loc?`<span class="loc">· ${escapeHtml(it.loc)}</span>`:""}</div>
+          <button class="del" data-del-group="photos:${group.map(g=>g.id).join(',')}">✕</button>
+          <div class="photo-grid">${imgs}</div>
+        </div>`;
+        i = j;
+      } else if(it.kind === "audio"){
+        let extra = "";
+        if(it.transcript){
+          extra = `<div class="transcript">${escapeHtml(it.transcript)}</div>`;
+        } else if(it.pending){
+          extra = `<div class="pending-row"><span>⏳ Pendiente de transcribir</span><button class="btn-mini" data-trans="${it.id}">Transcribir</button></div>`;
+        }
+        html += `<div class="card">
+          <div class="meta"><span class="icon">🎙️</span><span class="time">${t}</span>${it.loc?`<span class="loc">· ${escapeHtml(it.loc)}</span>`:""}</div>
+          <button class="del" data-del="entries:${it.id}">✕</button>
+          <audio controls src="${URL.createObjectURL(it.audioBlob)}"></audio>
+          ${extra}
+        </div>`;
+        i++;
+      } else {
+        html += `<div class="card">
+          <div class="meta"><span class="icon">✍️</span><span class="time">${t}</span>${it.loc?`<span class="loc">· ${escapeHtml(it.loc)}</span>`:""}</div>
+          <button class="del" data-del="entries:${it.id}">✕</button>
+          <div class="text">${escapeHtml(it.text)}</div>
+        </div>`;
+        i++;
+      }
+    }
+  });
+  el.innerHTML = html;
+
+  el.querySelectorAll("[data-del]").forEach(b=>{
+    b.addEventListener("click", async ()=>{
+      const [store,id] = b.dataset.del.split(":");
+      if(confirm("¿Eliminar esta entrada?")){
+        await deleteRecord(store, Number(id));
+        renderAll();
+      }
+    });
+  });
+  const btnAll = el.querySelector("#btnTransAll");
+  if(btnAll) btnAll.addEventListener("click", ()=>{ btnAll.disabled = true; transcribeAllPending(); });
+  el.querySelectorAll("[data-trans]").forEach(b=>{
+    b.addEventListener("click", async ()=>{
+      b.disabled = true;
+      const id = Number(b.dataset.trans);
+      const entries2 = await getAll("entries");
+      const entry = entries2.find(x=>x.id===id);
+      if(!entry) return;
+      const row = b.parentElement;
+      try{
+        await transcribeEntry(entry, (s)=>{ row.firstElementChild.textContent = s; });
+        toast("Transcripción lista");
+      }catch(err){
+        console.error(err);
+        toast("Falló. Verificá la conexión y reintentá.");
+        b.disabled = false;
+      }
+      renderAll();
+    });
+  });
+  el.querySelectorAll("[data-del-group]").forEach(b=>{
+    b.addEventListener("click", async ()=>{
+      const [store, ids] = b.dataset.delGroup.split(":");
+      if(confirm("¿Eliminar esta foto/fotos?")){
+        for(const id of ids.split(",")) await deleteRecord(store, Number(id));
+        renderAll();
+      }
+    });
+  });
+}
+
+async function renderFotos(){
+  const el = document.getElementById("view-fotos");
+  const photos = await getAll("photos");
+  if(photos.length===0){
+    el.innerHTML = `<div class="empty"><span class="big">📷</span>Todavía no sacaste fotos en esta bitácora.</div>`;
+    return;
+  }
+  photos.sort((a,b)=> b.ts.localeCompare(a.ts));
+  el.innerHTML = `<div class="photo-grid" style="grid-template-columns:repeat(3,1fr);">${
+    photos.map(p=>`<img src="${URL.createObjectURL(p.blob)}" title="${escapeHtml(p.loc||'')}">`).join("")
+  }</div>`;
+}
+
+async function renderResumen(){
+  const el = document.getElementById("resumenContent");
+  const [entries, photos] = await Promise.all([getAll("entries"), getAll("photos")]);
+  const items = [...entries, ...photos.map(p=>({...p, type:"foto"}))];
+  if(items.length===0){
+    el.innerHTML = `<div class="empty"><span class="big">📖</span>Cuando tengas notas y fotos cargadas, acá vas a poder armar el resumen del viaje para exportar o imprimir.</div>`;
+    return;
+  }
+  const byDay = {};
+  items.forEach(it=>{ (byDay[it.dateKey]=byDay[it.dateKey]||[]).push(it); });
+  const days = Object.keys(byDay).sort();
+
+  let html = "";
+  days.forEach(day=>{
+    const dayItems = byDay[day].sort((a,b)=>a.ts.localeCompare(b.ts));
+    const pics = dayItems.filter(x=>x.type==="foto");
+    const notes = dayItems.filter(x=>x.type!=="foto");
+    html += `<div class="resumen-day"><h2>${fmtDayLabel(day)}</h2>`;
+    if(pics.length){
+      html += `<div class="photo-grid">${pics.map(p=>`<img src="${URL.createObjectURL(p.blob)}">`).join("")}</div>`;
+    }
+    if(notes.length){
+      html += `<div class="notes">${notes.map(n=>{
+        const t = fmtTime(new Date(n.ts));
+        if(n.type==="audio"){
+          if(n.transcript){
+            return `<p><span class="t">${t}${n.loc?" · "+escapeHtml(n.loc):""} · 🎙️ audio</span>${escapeHtml(n.transcript)}</p>`;
+          }
+          return `<p><span class="t">${t}${n.loc?" · "+escapeHtml(n.loc):""}</span>🎙️ <audio controls src="${URL.createObjectURL(n.audioBlob)}" style="width:100%;vertical-align:middle;margin-top:4px;"></audio></p>`;
+        }
+        return `<p><span class="t">${t}${n.loc?" · "+escapeHtml(n.loc):""}</span>${escapeHtml(n.text)}</p>`;
+      }).join("")}</div>`;
+    }
+    html += `</div>`;
+  });
+  el.innerHTML = html;
+}
+
+function escapeHtml(s){
+  return (s||"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+}
+
+/* ================= PRINT ================= */
+document.getElementById("btnPrint").addEventListener("click", ()=> window.print());
+
+/* ================= BACKUP / RESTORE ================= */
+document.getElementById("btnExport").addEventListener("click", async ()=>{
+  toast("Preparando copia...");
+  const [entries, photos] = await Promise.all([getAll("entries"), getAll("photos")]);
+  const entriesOut = [];
+  for(const e of entries){
+    const copy = {...e};
+    if(copy.audioBlob){ copy.audioBase64 = await blobToBase64(copy.audioBlob); delete copy.audioBlob; }
+    entriesOut.push(copy);
+  }
+  const photosOut = [];
+  for(const p of photos){
+    const copy = {...p};
+    copy.photoBase64 = await blobToBase64(copy.blob);
+    delete copy.blob;
+    photosOut.push(copy);
+  }
+  const data = {
+    tripName: tripNameEl.textContent,
+    exportedAt: new Date().toISOString(),
+    entries: entriesOut,
+    photos: photosOut
+  };
+  const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `bitacora-viaje-${dateKey(new Date())}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  toast("Copia descargada");
+});
+
+document.getElementById("btnImport").addEventListener("click", ()=> document.getElementById("importFile").click());
+document.getElementById("importFile").addEventListener("change", async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const text = await file.text();
+    const data = JSON.parse(text);
+    if(!confirm("Esto va a AGREGAR las entradas del archivo a tu bitácora actual. ¿Continuar?")) { e.target.value=""; return; }
+    for(const en of (data.entries||[])){
+      const copy = {...en}; delete copy.id;
+      if(copy.audioBase64){ copy.audioBlob = base64ToBlob(copy.audioBase64); delete copy.audioBase64; }
+      await addRecord("entries", copy);
+    }
+    for(const ph of (data.photos||[])){
+      const copy = {...ph}; delete copy.id;
+      if(copy.photoBase64){ copy.blob = base64ToBlob(copy.photoBase64); delete copy.photoBase64; }
+      await addRecord("photos", copy);
+    }
+    toast("Copia restaurada");
+    renderAll();
+  }catch(err){
+    toast("No se pudo leer el archivo");
+  }
+  e.target.value = "";
+});
+
+/* ================= INIT ================= */
+openDB().then(renderAll).catch(()=>{
+  document.getElementById("view-bitacora").innerHTML = `<div class="empty">Este navegador no permite guardar datos localmente (IndexedDB). Probá abrir el archivo en Chrome.</div>`;
+});
+
+})();
+</script>
+</body>
+</html>
