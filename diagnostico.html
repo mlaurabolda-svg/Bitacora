@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Diagnóstico de Micrófono</title>
+<style>
+  body{font-family:-apple-system,Roboto,sans-serif; padding:20px; background:#16262c; color:#f6f3ea; line-height:1.6;}
+  h1{font-size:20px;}
+  button{width:100%; padding:16px; font-size:16px; border-radius:10px; border:none; background:#b23a2e; color:#fff; margin:16px 0; cursor:pointer;}
+  .box{background:#1e363f; border-radius:10px; padding:14px; margin-top:14px; font-family:monospace; font-size:13px; white-space:pre-wrap; word-break:break-word;}
+  .ok{color:#8fd19e;}
+  .err{color:#ff8a80;}
+  .info{color:#c9973e; font-size:13px; margin-top:10px;}
+</style>
+</head>
+<body>
+  <h1>🎙️ Diagnóstico de micrófono</h1>
+  <p>Esta página solo prueba si el navegador puede acceder al micrófono. No graba ni guarda nada.</p>
+  <button id="testBtn">Probar acceso al micrófono</button>
+  <div class="box" id="result">Tocá el botón para empezar.</div>
+  <div class="info" id="context"></div>
+<script>
+const result = document.getElementById('result');
+const context = document.getElementById('context');
+context.textContent =
+  "URL: " + location.href + "\n" +
+  "Es HTTPS o localhost: " + (location.protocol === "https:" || location.hostname === "localhost") + "\n" +
+  "navigator.mediaDevices existe: " + (!!navigator.mediaDevices) + "\n" +
+  "getUserMedia existe: " + (!!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
+document.getElementById('testBtn').addEventListener('click', async () => {
+  result.className = 'box';
+  result.textContent = 'Pidiendo permiso...';
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    result.className = 'box err';
+    result.textContent = 'ERROR: getUserMedia no disponible (falta HTTPS o navegador viejo).';
+    return;
+  }
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    result.className = 'box ok';
+    const tracks = stream.getAudioTracks();
+    result.textContent = '✅ ÉXITO. Micrófono abierto correctamente.\n\nPistas: ' + tracks.length +
+      (tracks[0] ? ('\nDispositivo: ' + tracks[0].label + '\nEstado: ' + tracks[0].readyState) : '');
+    stream.getTracks().forEach(t => t.stop());
+  }catch(err){
+    result.className = 'box err';
+    result.textContent = '❌ ERROR\n\nNombre: ' + err.name + '\nMensaje: ' + err.message + '\n\n' + explain(err.name);
+  }
+});
+function explain(name){
+  const map = {
+    'NotAllowedError': 'Permiso denegado por el navegador o el sistema operativo.',
+    'NotFoundError': 'No se encuentra ningún micrófono disponible.',
+    'NotReadableError': 'El micrófono existe y el permiso está OK, pero otra app lo tiene ocupado ahora mismo.',
+    'AbortError': 'La operación fue interrumpida.',
+    'SecurityError': 'Falta HTTPS o hay una política de seguridad bloqueándolo.',
+    'TypeError': 'Parámetros inválidos.'
+  };
+  return map[name] || 'Error no común; conviene buscar el nombre exacto de arriba.';
+}
+</script>
+</body>
+</html>
