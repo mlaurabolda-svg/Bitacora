@@ -18,47 +18,66 @@
   <h1>🎙️ Diagnóstico de micrófono</h1>
   <p>Esta página solo prueba si el navegador puede acceder al micrófono. No graba ni guarda nada.</p>
   <button id="testBtn">Probar acceso al micrófono</button>
+  <button id="testRecBtn" style="background:#c9973e;">Probar grabación (MediaRecorder)</button>
   <div class="box" id="result">Tocá el botón para empezar.</div>
-  <div class="info" id="context"></div>
+  <div class="box" id="result2" style="display:none;">-</div>
 <script>
 const result = document.getElementById('result');
-const context = document.getElementById('context');
-context.textContent =
-  "URL: " + location.href + "\n" +
-  "Es HTTPS o localhost: " + (location.protocol === "https:" || location.hostname === "localhost") + "\n" +
-  "navigator.mediaDevices existe: " + (!!navigator.mediaDevices) + "\n" +
-  "getUserMedia existe: " + (!!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia));
 document.getElementById('testBtn').addEventListener('click', async () => {
   result.className = 'box';
   result.textContent = 'Pidiendo permiso...';
-  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    result.className = 'box ok';
+    result.textContent = '✅ ÉXITO. Micrófono abierto correctamente.';
+    stream.getTracks().forEach(t => t.stop());
+  }catch(err){
     result.className = 'box err';
-    result.textContent = 'ERROR: getUserMedia no disponible (falta HTTPS o navegador viejo).';
+    result.textContent = '❌ ERROR\n\nNombre: ' + err.name + '\nMensaje: ' + err.message;
+  }
+});
+const result2 = document.getElementById('result2');
+document.getElementById('testRecBtn').addEventListener('click', async () => {
+  result2.style.display = 'block';
+  result2.className = 'box';
+  result2.textContent = 'Probando MediaRecorder...';
+  if(typeof MediaRecorder === 'undefined'){
+    result2.className = 'box err';
+    result2.textContent = '❌ Este navegador NO tiene MediaRecorder disponible.';
     return;
   }
   try{
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    result.className = 'box ok';
-    const tracks = stream.getAudioTracks();
-    result.textContent = '✅ ÉXITO. Micrófono abierto correctamente.\n\nPistas: ' + tracks.length +
-      (tracks[0] ? ('\nDispositivo: ' + tracks[0].label + '\nEstado: ' + tracks[0].readyState) : '');
-    stream.getTracks().forEach(t => t.stop());
+    let mr;
+    try{
+      mr = new MediaRecorder(stream);
+    }catch(errCtor){
+      result2.className = 'box err';
+      result2.textContent = '❌ ERROR AL CREAR MediaRecorder\n\nNombre: ' + errCtor.name + '\nMensaje: ' + errCtor.message;
+      stream.getTracks().forEach(t=>t.stop());
+      return;
+    }
+    let gotData = false;
+    mr.ondataavailable = (e)=>{ if(e.data && e.data.size>0) gotData = true; };
+    mr.onerror = (e)=>{
+      result2.className = 'box err';
+      result2.textContent = '❌ ERROR DURANTE LA GRABACIÓN\n\n' + (e.error ? (e.error.name + ': ' + e.error.message) : JSON.stringify(e));
+    };
+    mr.onstop = ()=>{
+      if(result2.className.indexOf('err') === -1){
+        result2.className = 'box ok';
+        result2.textContent = '✅ ÉXITO. Grabó 2 segundos de audio correctamente.\n\nDatos recibidos: ' + (gotData ? 'Sí' : 'No') + '\nmimeType: ' + mr.mimeType;
+      }
+      stream.getTracks().forEach(t=>t.stop());
+    };
+    mr.start();
+    result2.textContent = 'Grabando 2 segundos de prueba...';
+    setTimeout(()=>{ try{ mr.stop(); }catch(_){} }, 2000);
   }catch(err){
-    result.className = 'box err';
-    result.textContent = '❌ ERROR\n\nNombre: ' + err.name + '\nMensaje: ' + err.message + '\n\n' + explain(err.name);
+    result2.className = 'box err';
+    result2.textContent = '❌ ERROR\n\nNombre: ' + err.name + '\nMensaje: ' + err.message;
   }
 });
-function explain(name){
-  const map = {
-    'NotAllowedError': 'Permiso denegado por el navegador o el sistema operativo.',
-    'NotFoundError': 'No se encuentra ningún micrófono disponible.',
-    'NotReadableError': 'El micrófono existe y el permiso está OK, pero otra app lo tiene ocupado ahora mismo.',
-    'AbortError': 'La operación fue interrumpida.',
-    'SecurityError': 'Falta HTTPS o hay una política de seguridad bloqueándolo.',
-    'TypeError': 'Parámetros inválidos.'
-  };
-  return map[name] || 'Error no común; conviene buscar el nombre exacto de arriba.';
-}
 </script>
 </body>
 </html>
