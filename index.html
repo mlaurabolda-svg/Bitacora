@@ -68,11 +68,36 @@ header.top h1{
   margin:0;
   line-height:1.15;
 }
-header.top h1[contenteditable="true"]{
-  outline:none;
-  border-bottom:1px dashed rgba(246,243,234,.35);
-  cursor:text;
+.trip-switch-btn{
+  display:flex; align-items:center; gap:8px;
+  background:none; border:none; padding:0; margin:0;
+  cursor:pointer; text-align:left; width:100%;
 }
+.trip-switch-btn h1{margin:0;}
+.trip-switch-btn .chev{
+  color:var(--gold); font-size:15px; margin-top:4px;
+}
+.trip-row{
+  display:flex; align-items:center; gap:8px;
+  padding:11px 4px; border-bottom:1px solid var(--line);
+}
+.trip-row:last-child{border-bottom:none;}
+.trip-row .trip-main{
+  flex:1; display:flex; align-items:center; gap:9px;
+  background:none; border:none; padding:6px 2px; text-align:left; cursor:pointer;
+}
+.trip-row .trip-main .dot{
+  width:9px; height:9px; border-radius:50%; background:var(--line); flex-shrink:0;
+}
+.trip-row.current .trip-main .dot{background:var(--stamp);}
+.trip-row .trip-main .name{
+  font-family:var(--serif); font-size:15.5px; color:var(--ink);
+}
+.trip-row.current .trip-main .name{font-weight:700;}
+.trip-row .icon-btn{
+  border:none; background:none; font-size:15px; padding:6px; cursor:pointer; color:var(--ink-soft);
+}
+.trip-row .icon-btn:hover{color:var(--stamp);}
 header.top .sub{
   font-family:var(--mono);
   font-size:12px;
@@ -122,7 +147,6 @@ main{
 }
 .empty .big{font-size:38px; display:block; margin-bottom:10px;}
 
-/* day divider styled like a passport page tab */
 .day-divider{
   display:flex;
   align-items:baseline;
@@ -149,7 +173,6 @@ main{
 }
 .day-divider .line{flex:1; height:1px; background:var(--line);}
 
-/* entry card - "stamped ticket" look */
 .card{
   background:#fffdf8;
   border:1px solid var(--line);
@@ -375,8 +398,11 @@ main{
 
   <header class="top">
     <div class="eyebrow">Bitácora de viaje · sin conexión</div>
-    <h1 id="tripName" contenteditable="true">Mi viaje</h1>
-    <div class="sub" id="tripRange">Tocá el título para renombrarlo</div>
+    <button class="trip-switch-btn" id="tripSwitchBtn">
+      <h1 id="tripName">Mi viaje</h1>
+      <span class="chev">▾</span>
+    </button>
+    <div class="sub" id="tripRange">Tocá para cambiar o crear un viaje</div>
   </header>
 
   <nav class="tabs">
@@ -439,13 +465,27 @@ main{
 
     <div class="sheet" id="sheetFoto" style="display:none">
       <h3>📷 Fotos del momento</h3>
-      <div class="photo-picker" id="photoPicker">Tocá para elegir o sacar fotos</div>
-      <input type="file" id="photoInput" accept="image/*" multiple capture="environment" style="display:none">
+      <div class="photo-picker" id="photoPicker">🖼️ Elegir de la galería (podés elegir varias)</div>
+      <input type="file" id="photoInput" accept="image/*" multiple style="display:none">
+      <div class="field" style="margin-top:8px;"><label>o sacar una foto nueva ahora</label>
+        <button type="button" class="btn-flat" id="photoCameraBtn" style="width:100%;">📸 Abrir cámara</button>
+      </div>
+      <input type="file" id="photoInputCamera" accept="image/*" capture="environment" style="display:none">
       <div class="preview-strip" id="photoPreview"></div>
       <div class="field"><label>Lugar / pie de foto (opcional)</label><input type="text" id="fotoLoc" placeholder="Ej: Playa Grande al atardecer"></div>
       <div class="sheet-actions">
         <button class="cancel" data-close>Cancelar</button>
         <button class="save" data-save="foto">Guardar</button>
+      </div>
+    </div>
+
+    <div class="sheet" id="sheetTrips" style="display:none">
+      <h3>🧳 Mis viajes</h3>
+      <div id="tripsList"></div>
+      <div class="field" style="margin-top:14px;"><label>Nuevo viaje</label><input type="text" id="newTripName" placeholder="Ej: Patagonia 2026"></div>
+      <div class="sheet-actions">
+        <button class="cancel" data-close>Cerrar</button>
+        <button class="save" id="btnCreateTrip">Crear viaje</button>
       </div>
     </div>
   </div>
@@ -519,6 +559,10 @@ function clearStore(store){
     r.onerror = (e)=>reject(e);
   });
 }
+async function getAllTrip(store){
+  const all = await getAll(store);
+  return all.filter(x => x.tripId === currentTripId);
+}
 
 /* ================= UTILS ================= */
 function dateKey(d){
@@ -585,7 +629,6 @@ function startLiveTranscription(){
   };
   liveRec.onerror = ()=>{};
   liveRec.onend = ()=>{
-    // si el usuario sigue grabando, reintentar (Chrome corta solo a veces)
     if(mediaRecorder && mediaRecorder.state === "recording"){
       try{ liveRec.start(); }catch(_){}
     }
@@ -596,16 +639,111 @@ function stopLiveTranscription(){
   if(liveRec){ try{ liveRec.onend = null; liveRec.stop(); }catch(_){} liveRec = null; }
 }
 
-/* ================= TRIP NAME ================= */
-const tripNameEl = document.getElementById("tripName");
-tripNameEl.textContent = localStorage.getItem("bitacora_tripName") || "Mi viaje";
-tripNameEl.addEventListener("blur", ()=>{
-  const v = tripNameEl.textContent.trim() || "Mi viaje";
-  tripNameEl.textContent = v;
-  localStorage.setItem("bitacora_tripName", v);
+/* ================= VIAJES (multi-trip) ================= */
+const TRIPS_KEY = "bitacora_trips";
+const CURRENT_TRIP_KEY = "bitacora_currentTripId";
+let trips = [];
+let currentTripId = null;
+
+function loadTrips(){
+  try{ return JSON.parse(localStorage.getItem(TRIPS_KEY)) || []; }catch(_){ return []; }
+}
+function saveTrips(){ localStorage.setItem(TRIPS_KEY, JSON.stringify(trips)); }
+function getCurrentTrip(){ return trips.find(t=>t.id===currentTripId) || trips[0]; }
+
+async function initTrips(){
+  trips = loadTrips();
+  if(trips.length === 0){
+    const oldName = localStorage.getItem("bitacora_tripName") || "Mi viaje";
+    const defaultTrip = { id: "trip_" + Date.now(), name: oldName, createdAt: new Date().toISOString() };
+    trips = [defaultTrip];
+    saveTrips();
+    const [entries, photos] = await Promise.all([getAll("entries"), getAll("photos")]);
+    for(const e of entries){ if(!e.tripId){ e.tripId = defaultTrip.id; await putRecord("entries", e); } }
+    for(const p of photos){ if(!p.tripId){ p.tripId = defaultTrip.id; await putRecord("photos", p); } }
+  }
+  currentTripId = localStorage.getItem(CURRENT_TRIP_KEY);
+  if(!trips.find(t=>t.id===currentTripId)) currentTripId = trips[0].id;
+  localStorage.setItem(CURRENT_TRIP_KEY, currentTripId);
+  renderTripHeader();
+}
+
+function renderTripHeader(){
+  const trip = getCurrentTrip();
+  document.getElementById("tripName").textContent = trip ? trip.name : "Mi viaje";
+}
+
+function switchTrip(id){
+  currentTripId = id;
+  localStorage.setItem(CURRENT_TRIP_KEY, id);
+  renderTripHeader();
+  closeSheets();
+  renderAll();
+}
+
+function renderTripsList(){
+  const el = document.getElementById("tripsList");
+  el.innerHTML = trips.map(t => `
+    <div class="trip-row ${t.id===currentTripId?"current":""}">
+      <button class="trip-main" data-switch="${t.id}"><span class="dot"></span><span class="name">${escapeHtml(t.name)}</span></button>
+      <button class="icon-btn" data-rename="${t.id}" title="Renombrar">✏️</button>
+      <button class="icon-btn" data-deletetrip="${t.id}" title="Eliminar">🗑️</button>
+    </div>
+  `).join("");
+
+  el.querySelectorAll("[data-switch]").forEach(b=>{
+    b.addEventListener("click", ()=> switchTrip(b.dataset.switch));
+  });
+  el.querySelectorAll("[data-rename]").forEach(b=>{
+    b.addEventListener("click", async ()=>{
+      const t = trips.find(x=>x.id===b.dataset.rename);
+      const nuevo = prompt("Nuevo nombre del viaje:", t.name);
+      if(nuevo && nuevo.trim()){
+        t.name = nuevo.trim();
+        saveTrips();
+        renderTripHeader();
+        renderTripsList();
+      }
+    });
+  });
+  el.querySelectorAll("[data-deletetrip]").forEach(b=>{
+    b.addEventListener("click", async ()=>{
+      const id = b.dataset.deletetrip;
+      const t = trips.find(x=>x.id===id);
+      if(!confirm(`¿Eliminar "${t.name}" y todas sus notas, audios y fotos? Esto no se puede deshacer.`)) return;
+      const [entries, photos] = await Promise.all([getAll("entries"), getAll("photos")]);
+      for(const e of entries){ if(e.tripId===id) await deleteRecord("entries", e.id); }
+      for(const p of photos){ if(p.tripId===id) await deleteRecord("photos", p.id); }
+      trips = trips.filter(x=>x.id!==id);
+      if(trips.length===0){
+        const nuevo = { id: "trip_"+Date.now(), name: "Mi viaje", createdAt: new Date().toISOString() };
+        trips = [nuevo];
+      }
+      saveTrips();
+      if(currentTripId === id) currentTripId = trips[0].id;
+      localStorage.setItem(CURRENT_TRIP_KEY, currentTripId);
+      renderTripHeader();
+      renderTripsList();
+      renderAll();
+      toast("Viaje eliminado");
+    });
+  });
+}
+
+document.getElementById("tripSwitchBtn").addEventListener("click", ()=>{
+  renderTripsList();
+  openSheet("Trips");
 });
-tripNameEl.addEventListener("keydown", (e)=>{
-  if(e.key === "Enter"){ e.preventDefault(); tripNameEl.blur(); }
+document.getElementById("btnCreateTrip").addEventListener("click", ()=>{
+  const input = document.getElementById("newTripName");
+  const name = input.value.trim();
+  if(!name){ toast("Escribí un nombre para el viaje"); return; }
+  const nuevo = { id: "trip_"+Date.now(), name, createdAt: new Date().toISOString() };
+  trips.push(nuevo);
+  saveTrips();
+  input.value = "";
+  switchTrip(nuevo.id);
+  toast("Viaje creado");
 });
 
 /* ================= TABS ================= */
@@ -641,10 +779,8 @@ function openSheet(kind){
 }
 function closeSheets(){
   backdrop.classList.remove("open");
-  // reset texto
   document.getElementById("textoInput").value="";
   document.getElementById("textoLoc").value="";
-  // reset audio
   document.getElementById("audioLoc").value="";
   document.getElementById("audioPreviewWrap").style.display="none";
   document.getElementById("recStatus").textContent="Tocá para grabar";
@@ -654,7 +790,6 @@ function closeSheets(){
   liveFinal = "";
   document.getElementById("liveTranscript").innerHTML = '<span class="hint">Si tenés señal, acá vas a ver la transcripción en vivo mientras hablás. Sin señal, el audio queda guardado como "pendiente" y lo transcribís después.</span>';
   if(recStream){ recStream.getTracks().forEach(t=>t.stop()); recStream=null; }
-  // reset foto
   document.getElementById("fotoLoc").value="";
   document.getElementById("photoPreview").innerHTML="";
   pendingPhotos = [];
@@ -668,17 +803,29 @@ document.querySelector('[data-save="texto"]').addEventListener("click", async ()
   if(!text){ toast("Escribí algo primero"); return; }
   const loc = document.getElementById("textoLoc").value.trim();
   const now = new Date();
-  await addRecord("entries", {ts: now.toISOString(), dateKey: dateKey(now), type:"texto", text, loc});
+  await addRecord("entries", {ts: now.toISOString(), dateKey: dateKey(now), type:"texto", text, loc, tripId: currentTripId});
   toast("Nota guardada");
   closeSheets();
   renderAll();
 });
 
 /* ---- Audio record ---- */
+function pickSupportedMime(){
+  const candidates = ["audio/webm", "audio/webm;codecs=opus", "audio/mp4", "audio/ogg;codecs=opus", "audio/aac"];
+  if(typeof MediaRecorder === "undefined" || !MediaRecorder.isTypeSupported) return "";
+  for(const c of candidates){ if(MediaRecorder.isTypeSupported(c)) return c; }
+  return "";
+}
+let recordedMimeType = "audio/webm";
+
 document.getElementById("recBtn").addEventListener("click", async ()=>{
   const btn = document.getElementById("recBtn");
   const status = document.getElementById("recStatus");
   if(!mediaRecorder || mediaRecorder.state !== "recording"){
+    if(typeof MediaRecorder === "undefined"){
+      toast("Este navegador no puede grabar audio (falta MediaRecorder)");
+      return;
+    }
     try{
       recStream = await navigator.mediaDevices.getUserMedia({audio:true});
     }catch(err){
@@ -686,16 +833,36 @@ document.getElementById("recBtn").addEventListener("click", async ()=>{
       return;
     }
     audioChunks = [];
-    mediaRecorder = new MediaRecorder(recStream);
+    const mime = pickSupportedMime();
+    recordedMimeType = mime || "audio/webm";
+    try{
+      mediaRecorder = mime ? new MediaRecorder(recStream, {mimeType: mime}) : new MediaRecorder(recStream);
+    }catch(errCtor){
+      toast("No se pudo iniciar la grabación en este navegador (" + errCtor.name + ")");
+      recStream.getTracks().forEach(t=>t.stop()); recStream=null;
+      return;
+    }
     mediaRecorder.ondataavailable = (e)=> audioChunks.push(e.data);
+    mediaRecorder.onerror = (e)=>{
+      toast("Error durante la grabación: " + (e.error ? e.error.name : "desconocido"));
+      btn.classList.remove("recording");
+      status.textContent = "Tocá para grabar";
+      if(recStream){ recStream.getTracks().forEach(t=>t.stop()); recStream=null; }
+    };
     mediaRecorder.onstop = ()=>{
-      recordedBlob = new Blob(audioChunks, {type:"audio/webm"});
+      recordedBlob = new Blob(audioChunks, {type:recordedMimeType});
       const url = URL.createObjectURL(recordedBlob);
       document.getElementById("audioPreview").src = url;
       document.getElementById("audioPreviewWrap").style.display="block";
       if(recStream){ recStream.getTracks().forEach(t=>t.stop()); recStream=null; }
     };
-    mediaRecorder.start();
+    try{
+      mediaRecorder.start();
+    }catch(errStart){
+      toast("No se pudo iniciar la grabación (" + errStart.name + ")");
+      if(recStream){ recStream.getTracks().forEach(t=>t.stop()); recStream=null; }
+      return;
+    }
     startLiveTranscription();
     btn.classList.add("recording");
     status.textContent = "Grabando... tocá para detener";
@@ -715,7 +882,8 @@ document.querySelector('[data-save="audio"]').addEventListener("click", async ()
     ts: now.toISOString(), dateKey: dateKey(now), type:"audio",
     audioBlob: recordedBlob, loc,
     transcript: transcript || null,
-    pending: transcript ? false : true
+    pending: transcript ? false : true,
+    tripId: currentTripId
   });
   toast(transcript ? "Audio y transcripción guardados" : "Audio guardado (transcripción pendiente)");
   closeSheets();
@@ -724,7 +892,8 @@ document.querySelector('[data-save="audio"]').addEventListener("click", async ()
 
 /* ---- Foto ---- */
 document.getElementById("photoPicker").addEventListener("click", ()=> document.getElementById("photoInput").click());
-document.getElementById("photoInput").addEventListener("change", (e)=>{
+document.getElementById("photoCameraBtn").addEventListener("click", ()=> document.getElementById("photoInputCamera").click());
+function handlePhotoFiles(e){
   const files = Array.from(e.target.files || []);
   files.forEach(file=>{
     const url = URL.createObjectURL(file);
@@ -734,13 +903,15 @@ document.getElementById("photoInput").addEventListener("change", (e)=>{
     document.getElementById("photoPreview").appendChild(img);
   });
   e.target.value = "";
-});
+}
+document.getElementById("photoInput").addEventListener("change", handlePhotoFiles);
+document.getElementById("photoInputCamera").addEventListener("change", handlePhotoFiles);
 document.querySelector('[data-save="foto"]').addEventListener("click", async ()=>{
   if(pendingPhotos.length === 0){ toast("Elegí al menos una foto"); return; }
   const loc = document.getElementById("fotoLoc").value.trim();
   const now = new Date();
   for(const p of pendingPhotos){
-    await addRecord("photos", {ts: now.toISOString(), dateKey: dateKey(now), blob: p.file, loc});
+    await addRecord("photos", {ts: now.toISOString(), dateKey: dateKey(now), blob: p.file, loc, tripId: currentTripId});
   }
   toast(pendingPhotos.length>1 ? "Fotos guardadas" : "Foto guardada");
   closeSheets();
@@ -811,7 +982,7 @@ async function transcribeAllPending(){
     toast("Necesitás señal para descargar el modelo la primera vez");
     return;
   }
-  const entries = await getAll("entries");
+  const entries = await getAllTrip("entries");
   const pend = entries.filter(e=>e.type==="audio" && e.pending);
   if(pend.length===0){ toast("No hay audios pendientes"); return; }
   const banner = document.getElementById("pendingBannerText");
@@ -837,7 +1008,7 @@ async function renderAll(){
 
 async function renderBitacora(){
   const el = document.getElementById("view-bitacora");
-  const [entries, photos] = await Promise.all([getAll("entries"), getAll("photos")]);
+  const [entries, photos] = await Promise.all([getAllTrip("entries"), getAllTrip("photos")]);
   const items = [
     ...entries.map(x=>({...x, kind:x.type})),
     ...photos.map(x=>({...x, kind:"foto-item"}))
@@ -846,7 +1017,6 @@ async function renderBitacora(){
     el.innerHTML = `<div class="empty"><span class="big">🧭</span>Todavía no hay entradas.<br>Usá el botón + para sumar tu primera nota, audio o foto.</div>`;
     return;
   }
-  // group by dateKey, sort desc by day, asc within day by time
   const byDay = {};
   items.forEach(it=>{ (byDay[it.dateKey] = byDay[it.dateKey]||[]).push(it); });
   const days = Object.keys(byDay).sort().reverse();
@@ -860,7 +1030,6 @@ async function renderBitacora(){
     const dayItems = byDay[day].sort((a,b)=> a.ts.localeCompare(b.ts));
     html += `<div class="day-divider"><span class="tag">${day}</span><span class="label">${fmtDayLabel(day)}</span><span class="line"></span></div>`;
 
-    // group consecutive foto-items with same ts+loc into one grid card
     let i=0;
     while(i < dayItems.length){
       const it = dayItems[i];
@@ -945,7 +1114,7 @@ async function renderBitacora(){
 
 async function renderFotos(){
   const el = document.getElementById("view-fotos");
-  const photos = await getAll("photos");
+  const photos = await getAllTrip("photos");
   if(photos.length===0){
     el.innerHTML = `<div class="empty"><span class="big">📷</span>Todavía no sacaste fotos en esta bitácora.</div>`;
     return;
@@ -958,7 +1127,7 @@ async function renderFotos(){
 
 async function renderResumen(){
   const el = document.getElementById("resumenContent");
-  const [entries, photos] = await Promise.all([getAll("entries"), getAll("photos")]);
+  const [entries, photos] = await Promise.all([getAllTrip("entries"), getAllTrip("photos")]);
   const items = [...entries, ...photos.map(p=>({...p, type:"foto"}))];
   if(items.length===0){
     el.innerHTML = `<div class="empty"><span class="big">📖</span>Cuando tengas notas y fotos cargadas, acá vas a poder armar el resumen del viaje para exportar o imprimir.</div>`;
@@ -1019,7 +1188,7 @@ document.getElementById("btnExport").addEventListener("click", async ()=>{
     photosOut.push(copy);
   }
   const data = {
-    tripName: tripNameEl.textContent,
+    trips,
     exportedAt: new Date().toISOString(),
     entries: entriesOut,
     photos: photosOut
@@ -1027,9 +1196,9 @@ document.getElementById("btnExport").addEventListener("click", async ()=>{
   const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `bitacora-viaje-${dateKey(new Date())}.json`;
+  a.download = `bitacora-viajes-${dateKey(new Date())}.json`;
   document.body.appendChild(a); a.click(); a.remove();
-  toast("Copia descargada");
+  toast("Copia descargada (todos tus viajes)");
 });
 
 document.getElementById("btnImport").addEventListener("click", ()=> document.getElementById("importFile").click());
@@ -1039,18 +1208,25 @@ document.getElementById("importFile").addEventListener("change", async (e)=>{
   try{
     const text = await file.text();
     const data = JSON.parse(text);
-    if(!confirm("Esto va a AGREGAR las entradas del archivo a tu bitácora actual. ¿Continuar?")) { e.target.value=""; return; }
+    if(!confirm("Esto va a AGREGAR los viajes y entradas del archivo a los que ya tenés. ¿Continuar?")) { e.target.value=""; return; }
+    for(const t of (data.trips || [])){
+      if(!trips.find(x=>x.id===t.id)) trips.push(t);
+    }
+    saveTrips();
     for(const en of (data.entries||[])){
       const copy = {...en}; delete copy.id;
       if(copy.audioBase64){ copy.audioBlob = base64ToBlob(copy.audioBase64); delete copy.audioBase64; }
+      if(!copy.tripId) copy.tripId = currentTripId;
       await addRecord("entries", copy);
     }
     for(const ph of (data.photos||[])){
       const copy = {...ph}; delete copy.id;
       if(copy.photoBase64){ copy.blob = base64ToBlob(copy.photoBase64); delete copy.photoBase64; }
+      if(!copy.tripId) copy.tripId = currentTripId;
       await addRecord("photos", copy);
     }
     toast("Copia restaurada");
+    renderTripHeader();
     renderAll();
   }catch(err){
     toast("No se pudo leer el archivo");
@@ -1059,7 +1235,7 @@ document.getElementById("importFile").addEventListener("change", async (e)=>{
 });
 
 /* ================= INIT ================= */
-openDB().then(renderAll).catch(()=>{
+openDB().then(initTrips).then(renderAll).catch(()=>{
   document.getElementById("view-bitacora").innerHTML = `<div class="empty">Este navegador no permite guardar datos localmente (IndexedDB). Probá abrir el archivo en Chrome.</div>`;
 });
 
