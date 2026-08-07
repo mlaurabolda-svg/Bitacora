@@ -937,4 +937,35 @@ document.getElementById("importFile").addEventListener("change", async (e)=>{
     const data = JSON.parse(text);
     if(!confirm("Esto va a AGREGAR los viajes y entradas del archivo a los que ya tenés. ¿Continuar?")) { e.target.value=""; return; }
     for(const t of (data.trips || [])){
-      if(!trip
+      if(!trips.find(x=>x.id===t.id)) trips.push(t);
+    }
+    saveTrips();
+    for(const en of (data.entries||[])){
+      const copy = {...en}; delete copy.id;
+      if(copy.audioBase64){ copy.audioBlob = base64ToBlob(copy.audioBase64); delete copy.audioBase64; }
+      if(!copy.tripId) copy.tripId = currentTripId;
+      await addRecord("entries", copy);
+    }
+    for(const ph of (data.photos||[])){
+      const copy = {...ph}; delete copy.id;
+      if(copy.photoBase64){ copy.blob = base64ToBlob(copy.photoBase64); delete copy.photoBase64; }
+      if(!copy.tripId) copy.tripId = currentTripId;
+      await addRecord("photos", copy);
+    }
+    toast("Copia restaurada");
+    renderTripHeader();
+    renderAll();
+  }catch(err){
+    toast("No se pudo leer el archivo");
+  }
+  e.target.value = "";
+});
+
+openDB().then(initTrips).then(renderAll).catch(()=>{
+  document.getElementById("view-bitacora").innerHTML = `<div class="empty">Este navegador no permite guardar datos localmente (IndexedDB). Probá abrir el archivo en Chrome.</div>`;
+});
+
+})();
+</script>
+</body>
+</html>
