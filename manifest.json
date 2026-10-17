@@ -1,0 +1,12 @@
+{
+  "name": "Bitácora de Viaje",
+  "short_name": "Bitácora",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#16262c",
+  "theme_color": "#16262c",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
