@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rescate Bitácora</title>
+<style>
+  body{font-family:-apple-system,Roboto,sans-serif; padding:20px; background:#16262c; color:#f6f3ea; line-height:1.5; margin:0;}
+  h1{font-size:20px; margin:0 0 6px;}
+  p{font-size:14px; opacity:.8; margin:0 0 14px;}
+  button{width:100%; padding:15px; font-size:15px; border-radius:10px; border:none; color:#fff; margin:8px 0; font-weight:600;}
+  button:disabled{opacity:.4;}
+  .b1{background:#c9973e;} .b2{background:#2f6f5e;} .b3{background:#b23a2e;}
+  .box{background:#1e363f; border-radius:10px; padding:14px; margin-top:12px; font-family:monospace; font-size:13px; white-space:pre-wrap;}
+  a{color:#c9973e;}
+</style>
+</head>
+<body>
+  <h1>🛟 Rescate de la bitácora</h1>
+  <p>Esta página no muestra fotos, así que no se traba. Hacé los pasos en orden.</p>
+
+  <button class="b1" id="b1">1 · Ver qué tengo guardado</button>
+  <button class="b2" id="b2">2 · Quitar duplicados y achicar fotos</button>
+  <div class="box" id="out">Tocá el paso 1.</div>
+
+  <p style="margin-top:22px">Cuando el paso 2 termine, abrí la bitácora: <a href="./">mlaurabolda-svg.github.io/Bitacora/</a></p>
+
+  <p style="margin-top:30px">Solo si el paso 2 se corta una y otra vez sin avanzar:</p>
+  <button class="b3" id="b3">Borrar SOLO las fotos (notas y audios quedan)</button>
+
+<script>
+let db;
+const out = document.getElementById("out");
+const say = t => out.textContent = t;
+
+function openDB(){
+  return new Promise((res, rej)=>{
+    if(db) return res(db);
+    const r = indexedDB.open("bitacoraViajeDB");
+    r.onsuccess = e => { db = e.target.result; res(db); };
+    r.onerror = rej;
+  });
+}
+// Recorre de a un registro, sin cargar todo junto
+function eachRecord(store, fn){
+  return new Promise((res, rej)=>{
+    const r = db.transaction(store, "readonly").objectStore(store).openCursor();
+    r.onsuccess = e => {
+      const c = e.target.result;
+      if(c){ fn(c.value); c.continue(); } else res();
+    };
+    r.onerror = rej;
+  });
+}
+function getOne(store, id){
+  return new Promise((res, rej)=>{
+    const r = db.transaction(store, "readonly").objectStore(store).get(id);
+    r.onsuccess = () => res(r.result); r.onerror = rej;
+  });
+}
+function put(store, obj){
+  return new Promise((res, rej)=>{
+    const r = db.transaction(store, "readwrite").objectStore(store).put(obj);
+    r.onsuccess = () => res(); r.onerror = rej;
+  });
+}
+function del(store, id){
+  return new Promise((res, rej)=>{
+    const r = db.transaction(store, "readwrite").objectStore(store).delete(id);
+    r.onsuccess = () => res(); r.onerror = rej;
+  });
+}
+function mb(n){ return (n/1024/1024).toFixed(1) + " MB"; }
+const wait = ms => new Promise(r=>setTimeout(r, ms));
+
+async function compress(blob){
+  const MAX = 1600;
+  const bmp = await createImageBitmap(blob);
+  const s = Math.min(1, MAX / Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.round(bmp.width*s); c.height = Math.round(bmp.height*s);
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close();
+  const r = await new Promise(ok => c.toBlob(ok, "image/jpeg", 0.8));
+  c.width = c.height = 0;
+  return r;
+}
+
+document.getElementById("b1").onclick = async ()=>{
+  try{
+    say("Revisando...");
+    await openDB();
+    let fotos = 0, pesadas = 0, bytes = 0, notas = 0;
+    const vistos = new Set(); let dup = 0;
+    await eachRecord("photos", p => {
+      fotos++;
+      const sz = p.blob ? p.blob.size : 0;
+      bytes += sz;
+      if(!p.optimized) pesadas++;
+      const k = p.tripId+"|"+p.ts+"|"+p.loc+"|"+sz;
+      if(vistos.has(k)) dup++; else vistos.add(k);
+    });
+    await eachRecord("entries", e => { notas++; });
+    say(`Fotos: ${fotos} (${mb(bytes)})\n  duplicadas: ${dup}\n  pesadas: ${pesadas}\nNotas y audios: ${notas}\n\n` +
+        (dup || pesadas ? "👉 Tocá el paso 2." : "✅ Está todo bien. Abrí la bitácora."));
+  }catch(err){ say("❌ Error: " + err.message); }
+};
+
+document.getElementById("b2").onclick = async ()=>{
+  const b = document.getElementById("b2"); b.disabled = true;
+  try{
+    await openDB();
+    say("Buscando duplicados...");
+    // 1) juntar solo ids y claves (no las fotos)
+    const lista = [];
+    await eachRecord("photos", p => lista.push({id:p.id, k:p.tripId+"|"+p.ts+"|"+p.loc+"|"+(p.blob?p.blob.size:0), ok:!!p.optimized}));
+    lista.sort((a,b)=>a.id-b.id);
+    const vistos = new Set(); let borradas = 0; const aAchicar = [];
+    for(const x of lista){
+      if(vistos.has(x.k)){ await del("photos", x.id); borradas++; }
+      else { vistos.add(x.k); if(!x.ok) aAchicar.push(x.id); }
+    }
+    // duplicados de notas
+    const notas = [];
+    await eachRecord("entries", e => notas.push({id:e.id, k:e.tripId+"|"+e.ts+"|"+e.type+"|"+(e.type==="texto"?e.text:(e.audioBlob?e.audioBlob.size:""))}));
+    notas.sort((a,b)=>a.id-b.id);
+    const vn = new Set(); let notasBorr = 0;
+    for(const x of notas){ if(vn.has(x.k)){ await del("entries", x.id); notasBorr++; } else vn.add(x.k); }
+
+    // 2) achicar de a una
+    for(let i=0;i<aAchicar.length;i++){
+      say(`Duplicados quitados: ${borradas} fotos, ${notasBorr} notas\n\nAchicando foto ${i+1} de ${aAchicar.length}...\n(no cierres la página)`);
+      const p = await getOne("photos", aAchicar[i]);
+      try{
+        p.blob = await compress(p.blob);
+      }catch(_){ /* si una foto no se puede leer, se deja como está */ }
+      p.optimized = true;
+      await put("photos", p);
+      await wait(150); // le da aire al teléfono
+    }
+    say(`✅ Listo.\nDuplicados quitados: ${borradas} fotos, ${notasBorr} notas\nFotos achicadas: ${aAchicar.length}\n\nYa podés abrir la bitácora.`);
+  }catch(err){
+    say("Se cortó: " + err.message + "\n\nTocá el paso 2 de nuevo: sigue desde donde quedó.");
+  }
+  b.disabled = false;
+};
+
+document.getElementById("b3").onclick = async ()=>{
+  if(!confirm("Se borran TODAS las fotos de la bitácora. Las notas y audios quedan. ¿Seguro?")) return;
+  try{
+    await openDB();
+    await new Promise((res, rej)=>{
+      const r = db.transaction("photos","readwrite").objectStore("photos").clear();
+      r.onsuccess = res; r.onerror = rej;
+    });
+    say("✅ Fotos borradas. Las originales siguen en la galería de tu teléfono.\nYa podés abrir la bitácora y volver a cargar las que quieras.");
+  }catch(err){ say("❌ Error: " + err.message); }
+};
+</script>
+</body>
+</html>
