@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Bitácora de Viaje</title>
+<!-- v10 -->
 <style>
 :root{
   --night:#16262c;
@@ -1143,6 +1144,7 @@ async function runMaintenance(setStatus){
 
 /* ================= RENDER ================= */
 async function renderAll(){
+  stopPlayer();
   liveUrls.forEach(u=>URL.revokeObjectURL(u));
   liveUrls = [];
   if(currentView === "bitacora") await renderBitacora();
@@ -1205,7 +1207,7 @@ async function renderBitacora(){
         html += `<div class="card">
           <div class="meta"><span class="icon">🎙️</span><span class="time">${t}</span>${it.loc?`<span class="loc">· ${escapeHtml(it.loc)}</span>`:""}</div>
           <button class="del" data-del="entries:${it.id}">✕</button>
-          <audio controls preload="none" src="${photoUrl(it.audioBlob)}"></audio>
+          <button class="btn-mini" data-play="${it.id}">▶ Escuchar</button>
           ${extra}
         </div>`;
         i++;
@@ -1315,7 +1317,7 @@ async function renderResumen(){
           if(n.transcript){
             return `<p><span class="t">${t}${n.loc?" · "+escapeHtml(n.loc):""} · 🎙️ audio</span>${escapeHtml(n.transcript)}</p>`;
           }
-          return `<p><span class="t">${t}${n.loc?" · "+escapeHtml(n.loc):""}</span>🎙️ <audio controls preload="none" src="${photoUrl(n.audioBlob)}" style="width:100%;vertical-align:middle;margin-top:4px;"></audio></p>`;
+          return `<p><span class="t">${t}${n.loc?" · "+escapeHtml(n.loc):""}</span>🎙️ <button class="btn-mini" data-play="${n.id}">▶ Escuchar</button></p>`;
         }
         return `<p><span class="t">${t}${n.loc?" · "+escapeHtml(n.loc):""}</span>${escapeHtml(n.text)}</p>`;
       }).join("")}</div>`;
@@ -1398,6 +1400,26 @@ document.getElementById("importFile").addEventListener("change", async (e)=>{
 });
 
 /* ================= INIT ================= */
+let player = null, playerUrl = null, playerBtn = null;
+function stopPlayer(){
+  if(player){ player.pause(); player = null; }
+  if(playerUrl){ URL.revokeObjectURL(playerUrl); playerUrl = null; }
+  if(playerBtn){ playerBtn.textContent = "▶ Escuchar"; playerBtn = null; }
+}
+document.addEventListener("click", async (e)=>{
+  const b = e.target.closest && e.target.closest("[data-play]");
+  if(!b) return;
+  if(playerBtn === b){ stopPlayer(); return; }
+  stopPlayer();
+  const en = await getOne("entries", Number(b.dataset.play));
+  if(!en || !en.audioBlob){ toast("No se encontró el audio"); return; }
+  playerUrl = URL.createObjectURL(en.audioBlob);
+  player = new Audio(playerUrl);
+  playerBtn = b;
+  b.textContent = "■ Detener";
+  player.onended = stopPlayer;
+  player.play().catch(()=>{ toast("No se pudo reproducir"); stopPlayer(); });
+});
 let viewerUrl = null;
 document.addEventListener("click", async (e)=>{
   const img = e.target.closest && e.target.closest("img[data-full]");
