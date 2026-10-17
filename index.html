@@ -40,7 +40,6 @@ header.top .sub{font-family:var(--mono); font-size:12px; color:rgba(246,243,234,
 .trip-row .trip-main .name{font-family:var(--serif); font-size:15.5px; color:var(--ink);}
 .trip-row.current .trip-main .name{font-weight:700;}
 .trip-row .icon-btn{border:none; background:none; font-size:15px; padding:6px; cursor:pointer; color:var(--ink-soft);}
-.trip-row .icon-btn:hover{color:var(--stamp);}
 nav.tabs{display:flex; background:var(--paper); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20;}
 nav.tabs button{flex:1; border:none; background:transparent; font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; padding:13px 4px 11px; color:var(--ink-soft); border-bottom:3px solid transparent; cursor:pointer;}
 nav.tabs button.active{color:var(--stamp); border-bottom-color:var(--stamp); font-weight:700;}
@@ -58,7 +57,6 @@ main{flex:1; padding:18px 16px 120px; overflow-y:auto;}
 .card .meta .loc{color:var(--ink-soft); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
 .card .meta .icon{font-size:13px;}
 .card .del{position:absolute; top:8px; right:8px; border:none; background:none; color:var(--line); font-size:15px; cursor:pointer; padding:4px; line-height:1;}
-.card .del:hover{color:var(--stamp);}
 .card .text{font-family:var(--serif); font-size:15.5px; line-height:1.5; color:var(--ink); white-space:pre-wrap; padding-right:16px;}
 .card audio{width:100%; margin-top:2px; height:34px;}
 .card .transcript{font-family:var(--serif); font-size:14.5px; line-height:1.5; color:var(--ink); margin-top:8px; padding:8px 10px; background:var(--paper); border-left:2px solid var(--gold); border-radius:0 6px 6px 0; white-space:pre-wrap;}
@@ -71,10 +69,11 @@ main{flex:1; padding:18px 16px 120px; overflow-y:auto;}
 .live-transcript .hint{color:var(--ink-soft); font-style:italic; font-size:13px;}
 .photo-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:5px;}
 .photo-grid img{width:100%; height:100px; object-fit:cover; border-radius:6px; background:var(--paper-dim);}
-.card .caption{font-family:var(--serif); font-style:italic; font-size:13.5px; color:var(--ink-soft); margin-top:6px;}
+.photo-pending{height:100px; border-radius:6px; background:var(--paper-dim); display:flex; flex-direction:column; align-items:center; justify-content:center; font-size:22px; color:var(--ink-soft);}
+.photo-pending span{font-family:var(--mono); font-size:9px; text-transform:uppercase; margin-top:2px;}
 .resumen-day{margin-bottom:30px; page-break-inside:avoid;}
 .resumen-day h2{font-family:var(--serif); font-size:19px; border-bottom:2px solid var(--stamp); padding-bottom:5px; margin:0 0 10px; text-transform:capitalize;}
-.resumen-day .photo-grid{grid-template-columns:repeat(3,1fr); margin-bottom:8px;}
+.resumen-day .photo-grid{margin-bottom:8px;}
 .resumen-day .photo-grid img{height:110px;}
 .resumen-day .notes p{font-family:var(--serif); font-size:14.5px; line-height:1.55; margin:0 0 8px; padding-left:10px; border-left:2px solid var(--gold);}
 .resumen-day .notes p .t{font-family:var(--mono); font-size:10.5px; color:var(--stamp); display:block; margin-bottom:2px;}
@@ -103,17 +102,18 @@ main{flex:1; padding:18px 16px 120px; overflow-y:auto;}
 .rec-status{font-family:var(--mono); font-size:13px; color:var(--ink-soft);}
 .photo-picker{border:1.5px dashed var(--line); border-radius:10px; padding:18px; text-align:center; font-family:var(--mono); font-size:12px; color:var(--ink-soft); cursor:pointer; margin-bottom:12px;}
 .preview-strip{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px;}
-.preview-strip img, .preview-strip .aud{width:64px; height:64px; object-fit:cover; border-radius:8px; background:var(--paper-dim);}
+.preview-strip img{width:64px; height:64px; object-fit:cover; border-radius:8px; background:var(--paper-dim);}
 .sheet-actions{display:flex; gap:10px; margin-top:6px;}
 .sheet-actions button{flex:1; padding:12px; border-radius:8px; border:none; font-family:var(--sans); font-weight:600; font-size:14.5px; cursor:pointer;}
 .sheet-actions .cancel{background:var(--paper-dim); color:var(--ink);}
 .sheet-actions .save{background:var(--stamp); color:#fff;}
+.sheet-actions .save:disabled{opacity:.5; cursor:default;}
 .toast{position:fixed; bottom:96px; left:50%; transform:translateX(-50%); background:var(--night); color:var(--paper); padding:10px 18px; border-radius:20px; font-size:13px; font-family:var(--sans); opacity:0; pointer-events:none; transition:opacity .25s; z-index:60;}
 .toast.show{opacity:1;}
 @media print{
   body{background:#fff;}
   header.top, nav.tabs, .fab, .resumen-actions, .sheet-backdrop{display:none !important;}
-  #app{max-width:none; box-shadow:none;}
+  #app{max-width:none;}
   main{padding:0; overflow:visible;}
   #view-bitacora, #view-fotos{display:none !important;}
 }
@@ -247,7 +247,6 @@ function openDB(){
     req.onerror = (e)=> reject(e);
   });
 }
-
 function txStore(name, mode){ return db.transaction(name, mode).objectStore(name); }
 function addRecord(store, obj){
   return new Promise((resolve,reject)=>{
@@ -273,13 +272,6 @@ function putRecord(store, obj){
 function deleteRecord(store, id){
   return new Promise((resolve,reject)=>{
     const r = txStore(store,"readwrite").delete(id);
-    r.onsuccess = ()=>resolve();
-    r.onerror = (e)=>reject(e);
-  });
-}
-function clearStore(store){
-  return new Promise((resolve,reject)=>{
-    const r = txStore(store,"readwrite").clear();
     r.onsuccess = ()=>resolve();
     r.onerror = (e)=>reject(e);
   });
@@ -387,12 +379,10 @@ async function initTrips(){
   localStorage.setItem(CURRENT_TRIP_KEY, currentTripId);
   renderTripHeader();
 }
-
 function renderTripHeader(){
   const trip = getCurrentTrip();
   document.getElementById("tripName").textContent = trip ? trip.name : "Mi viaje";
 }
-
 function switchTrip(id){
   currentTripId = id;
   localStorage.setItem(CURRENT_TRIP_KEY, id);
@@ -400,7 +390,6 @@ function switchTrip(id){
   closeSheets();
   renderAll();
 }
-
 function renderTripsList(){
   const el = document.getElementById("tripsList");
   el.innerHTML = trips.map(t => `
@@ -410,12 +399,11 @@ function renderTripsList(){
       <button class="icon-btn" data-deletetrip="${t.id}" title="Eliminar">🗑️</button>
     </div>
   `).join("");
-
   el.querySelectorAll("[data-switch]").forEach(b=>{
     b.addEventListener("click", ()=> switchTrip(b.dataset.switch));
   });
   el.querySelectorAll("[data-rename]").forEach(b=>{
-    b.addEventListener("click", async ()=>{
+    b.addEventListener("click", ()=>{
       const t = trips.find(x=>x.id===b.dataset.rename);
       const nuevo = prompt("Nuevo nombre del viaje:", t.name);
       if(nuevo && nuevo.trim()){
@@ -436,8 +424,7 @@ function renderTripsList(){
       for(const p of photos){ if(p.tripId===id) await deleteRecord("photos", p.id); }
       trips = trips.filter(x=>x.id!==id);
       if(trips.length===0){
-        const nuevo = { id: "trip_"+Date.now(), name: "Mi viaje", createdAt: new Date().toISOString() };
-        trips = [nuevo];
+        trips = [{ id: "trip_"+Date.now(), name: "Mi viaje", createdAt: new Date().toISOString() }];
       }
       saveTrips();
       if(currentTripId === id) currentTripId = trips[0].id;
@@ -449,7 +436,6 @@ function renderTripsList(){
     });
   });
 }
-
 document.getElementById("tripSwitchBtn").addEventListener("click", ()=>{
   renderTripsList();
   openSheet("Trips");
@@ -503,6 +489,7 @@ function openSheet(kind){
   document.querySelectorAll(".sheet").forEach(s=>s.style.display="none");
   document.getElementById("sheet"+kind.charAt(0).toUpperCase()+kind.slice(1)).style.display="block";
   backdrop.classList.add("open");
+  document.querySelectorAll(".sheet .save").forEach(b=>b.disabled=false);
   ["textoFecha","audioFecha","fotoFecha"].forEach(id=>{
     const el = document.getElementById(id);
     if(el && !el.value) el.value = nowForInput();
@@ -526,18 +513,23 @@ function closeSheets(){
   document.getElementById("fotoLoc").value="";
   document.getElementById("fotoFecha").value="";
   document.getElementById("photoPreview").innerHTML="";
+  pendingPhotos.forEach(p=>URL.revokeObjectURL(p.url));
   pendingPhotos = [];
 }
 backdrop.addEventListener("click",(e)=>{ if(e.target===backdrop) closeSheets(); });
 document.querySelectorAll("[data-close]").forEach(b=>b.addEventListener("click", closeSheets));
 
-document.querySelector('[data-save="texto"]').addEventListener("click", async ()=>{
+document.querySelector('[data-save="texto"]').addEventListener("click", async (ev)=>{
+  const btn = ev.currentTarget;
+  if(btn.disabled) return;
   const text = document.getElementById("textoInput").value.trim();
   if(!text){ toast("Escribí algo primero"); return; }
+  btn.disabled = true;
   const loc = document.getElementById("textoLoc").value.trim();
   const now = getChosenDate("textoFecha");
   await addRecord("entries", {ts: now.toISOString(), dateKey: dateKey(now), type:"texto", text, loc, tripId: currentTripId});
   toast("Nota guardada");
+  btn.disabled = false;
   closeSheets();
   renderAll();
 });
@@ -583,8 +575,7 @@ document.getElementById("recBtn").addEventListener("click", async ()=>{
     };
     mediaRecorder.onstop = ()=>{
       recordedBlob = new Blob(audioChunks, {type:recordedMimeType});
-      const url = URL.createObjectURL(recordedBlob);
-      document.getElementById("audioPreview").src = url;
+      document.getElementById("audioPreview").src = URL.createObjectURL(recordedBlob);
       document.getElementById("audioPreviewWrap").style.display="block";
       if(recStream){ recStream.getTracks().forEach(t=>t.stop()); recStream=null; }
     };
@@ -605,8 +596,11 @@ document.getElementById("recBtn").addEventListener("click", async ()=>{
     status.textContent = "Grabación lista";
   }
 });
-document.querySelector('[data-save="audio"]').addEventListener("click", async ()=>{
+document.querySelector('[data-save="audio"]').addEventListener("click", async (ev)=>{
+  const btn = ev.currentTarget;
+  if(btn.disabled) return;
   if(!recordedBlob){ toast("Grabá una nota primero"); return; }
+  btn.disabled = true;
   const loc = document.getElementById("audioLoc").value.trim();
   const now = getChosenDate("audioFecha");
   const transcript = liveFinal.trim();
@@ -618,6 +612,7 @@ document.querySelector('[data-save="audio"]').addEventListener("click", async ()
     tripId: currentTripId
   });
   toast(transcript ? "Audio y transcripción guardados" : "Audio guardado (transcripción pendiente)");
+  btn.disabled = false;
   closeSheets();
   renderAll();
 });
@@ -637,20 +632,25 @@ function handlePhotoFiles(e){
 }
 document.getElementById("photoInput").addEventListener("change", handlePhotoFiles);
 document.getElementById("photoInputCamera").addEventListener("change", handlePhotoFiles);
-document.querySelector('[data-save="foto"]').addEventListener("click", async ()=>{
+document.querySelector('[data-save="foto"]').addEventListener("click", async (ev)=>{
+  const btn = ev.currentTarget;
+  if(btn.disabled) return;
   if(pendingPhotos.length === 0){ toast("Elegí al menos una foto"); return; }
+  btn.disabled = true;
   const loc = document.getElementById("fotoLoc").value.trim();
   const now = getChosenDate("fotoFecha");
   for(const p of pendingPhotos){
-    await addRecord("photos", {ts: now.toISOString(), dateKey: dateKey(now), blob: p.file, loc, tripId: currentTripId});
+    toast("Procesando foto...");
+    const small = await compressImage(p.file);
+    await addRecord("photos", {ts: now.toISOString(), dateKey: dateKey(now), blob: small, optimized: true, loc, tripId: currentTripId});
   }
   toast(pendingPhotos.length>1 ? "Fotos guardadas" : "Foto guardada");
+  btn.disabled = false;
   closeSheets();
   renderAll();
 });
 
 let whisperPipe = null, whisperLoading = false;
-
 async function getWhisper(statusCb){
   if(whisperPipe) return whisperPipe;
   if(whisperLoading){ throw new Error("Ya se está cargando el modelo"); }
@@ -672,7 +672,6 @@ async function getWhisper(statusCb){
     whisperLoading = false;
   }
 }
-
 async function blobToPCM16k(blob){
   const arrayBuf = await blob.arrayBuffer();
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -689,24 +688,17 @@ async function blobToPCM16k(blob){
   const rendered = await offline.startRendering();
   return rendered.getChannelData(0);
 }
-
 async function transcribeEntry(entry, statusCb){
   const pipe = await getWhisper(statusCb);
   statusCb && statusCb("Transcribiendo…");
   const pcm = await blobToPCM16k(entry.audioBlob);
-  const out = await pipe(pcm, {
-    language: "spanish",
-    task: "transcribe",
-    chunk_length_s: 30,
-    stride_length_s: 5
-  });
+  const out = await pipe(pcm, {language:"spanish", task:"transcribe", chunk_length_s:30, stride_length_s:5});
   const text = (out && out.text ? out.text : "").trim();
   entry.transcript = text || "(no se detectó voz)";
   entry.pending = false;
   await putRecord("entries", entry);
   return text;
 }
-
 async function transcribeAllPending(){
   if(!navigator.onLine && !whisperPipe){
     toast("Necesitás señal para descargar el modelo la primera vez");
@@ -723,13 +715,83 @@ async function transcribeAllPending(){
     }
     toast("Transcripciones listas");
   }catch(err){
-    console.error(err);
     toast("Falló la transcripción. Verificá la conexión y reintentá.");
   }
   renderAll();
 }
 
+/* ===== FOTOS LIVIANAS ===== */
+async function compressImage(file){
+  const MAX = 1600;
+  try{
+    let w, h, src;
+    if(window.createImageBitmap){
+      src = await createImageBitmap(file);
+      w = src.width; h = src.height;
+    } else {
+      src = await new Promise((res, rej)=>{
+        const img = new Image();
+        img.onload = ()=>res(img);
+        img.onerror = rej;
+        img.src = URL.createObjectURL(file);
+      });
+      w = src.naturalWidth; h = src.naturalHeight;
+    }
+    const scale = Math.min(1, MAX / Math.max(w, h));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(w*scale);
+    canvas.height = Math.round(h*scale);
+    canvas.getContext("2d").drawImage(src, 0, 0, canvas.width, canvas.height);
+    if(src.close) src.close();
+    const out = await new Promise(res=>canvas.toBlob(res, "image/jpeg", 0.8));
+    canvas.width = canvas.height = 0;
+    return out || file;
+  }catch(_){
+    return file;
+  }
+}
+let liveUrls = [];
+function photoUrl(blob){
+  const u = URL.createObjectURL(blob);
+  liveUrls.push(u);
+  return u;
+}
+function photoTag(p, extra){
+  if(!p.optimized){
+    return `<div class="photo-pending" ${extra||""}>📷<span>sin optimizar</span></div>`;
+  }
+  return `<img loading="lazy" decoding="async" src="${photoUrl(p.blob)}" ${extra||""}>`;
+}
+function dupKeyPhoto(p){ return p.tripId+"|"+p.ts+"|"+p.loc+"|"+(p.blob?p.blob.size:0); }
+function dupKeyEntry(e){ return e.tripId+"|"+e.ts+"|"+e.type+"|"+(e.type==="texto"?e.text:(e.audioBlob?e.audioBlob.size:"")); }
+async function runMaintenance(setStatus){
+  const [entries, photos] = await Promise.all([getAll("entries"), getAll("photos")]);
+  const seenP = new Set(), seenE = new Set();
+  let removed = 0;
+  photos.sort((a,b)=>a.id-b.id);
+  for(const p of photos){
+    const k = dupKeyPhoto(p);
+    if(seenP.has(k)){ await deleteRecord("photos", p.id); removed++; } else seenP.add(k);
+  }
+  entries.sort((a,b)=>a.id-b.id);
+  for(const e of entries){
+    const k = dupKeyEntry(e);
+    if(seenE.has(k)){ await deleteRecord("entries", e.id); removed++; } else seenE.add(k);
+  }
+  const rest = (await getAll("photos")).filter(p=>!p.optimized);
+  for(let i=0;i<rest.length;i++){
+    setStatus && setStatus(`Optimizando foto ${i+1} de ${rest.length}…`);
+    const p = rest[i];
+    p.blob = await compressImage(p.blob);
+    p.optimized = true;
+    await putRecord("photos", p);
+  }
+  return {removed, optimized: rest.length};
+}
+
 async function renderAll(){
+  liveUrls.forEach(u=>URL.revokeObjectURL(u));
+  liveUrls = [];
   if(currentView === "bitacora") await renderBitacora();
   else if(currentView === "fotos") await renderFotos();
   else if(currentView === "resumen") await renderResumen();
@@ -751,14 +813,17 @@ async function renderBitacora(){
   const days = Object.keys(byDay).sort().reverse();
 
   const pendCount = entries.filter(e=>e.type==="audio" && e.pending).length;
+  const heavyCount = photos.filter(p=>!p.optimized).length;
   let html = "";
+  if(heavyCount > 0){
+    html += `<div class="pending-banner"><span id="maintText">🧹 ${heavyCount} foto${heavyCount>1?"s":""} pesada${heavyCount>1?"s":""}. Optimizalas para que la app no se trabe.</span><button class="btn-mini" id="btnMaint">Optimizar</button></div>`;
+  }
   if(pendCount > 0){
     html += `<div class="pending-banner"><span id="pendingBannerText">🎙️ ${pendCount} audio${pendCount>1?"s":""} pendiente${pendCount>1?"s":""} de transcribir</span><button class="btn-mini" id="btnTransAll">Transcribir</button></div>`;
   }
   days.forEach(day=>{
     const dayItems = byDay[day].sort((a,b)=> a.ts.localeCompare(b.ts));
     html += `<div class="day-divider"><span class="tag">${day}</span><span class="label">${fmtDayLabel(day)}</span><span class="line"></span></div>`;
-
     let i=0;
     while(i < dayItems.length){
       const it = dayItems[i];
@@ -767,8 +832,8 @@ async function renderBitacora(){
         const group = [it];
         let j=i+1;
         while(j<dayItems.length && dayItems[j].kind==="foto-item" && dayItems[j].ts===it.ts){ group.push(dayItems[j]); j++; }
-        const imgs = group.map(g=>`<img src="${URL.createObjectURL(g.blob)}" data-id="${g.id}">`).join("");
-        html += `<div class="card" data-store="photos" data-idgroup="${group.map(g=>g.id).join(',')}">
+        const imgs = group.map(g=>photoTag(g, `data-id="${g.id}"`)).join("");
+        html += `<div class="card">
           <div class="meta"><span class="icon">📷</span><span class="time">${t}</span>${it.loc?`<span class="loc">· ${escapeHtml(it.loc)}</span>`:""}</div>
           <button class="del" data-del-group="photos:${group.map(g=>g.id).join(',')}">✕</button>
           <div class="photo-grid">${imgs}</div>
@@ -784,7 +849,7 @@ async function renderBitacora(){
         html += `<div class="card">
           <div class="meta"><span class="icon">🎙️</span><span class="time">${t}</span>${it.loc?`<span class="loc">· ${escapeHtml(it.loc)}</span>`:""}</div>
           <button class="del" data-del="entries:${it.id}">✕</button>
-          <audio controls src="${URL.createObjectURL(it.audioBlob)}"></audio>
+          <audio controls src="${photoUrl(it.audioBlob)}"></audio>
           ${extra}
         </div>`;
         i++;
@@ -809,6 +874,18 @@ async function renderBitacora(){
       }
     });
   });
+  const btnMaint = el.querySelector("#btnMaint");
+  if(btnMaint) btnMaint.addEventListener("click", async ()=>{
+    btnMaint.disabled = true;
+    const txt = document.getElementById("maintText");
+    try{
+      const r = await runMaintenance(s=>{ txt.textContent = s; });
+      toast(`Listo: ${r.removed} duplicados quitados, ${r.optimized} fotos optimizadas`);
+    }catch(err){
+      toast("Se cortó la optimización. Tocá Optimizar de nuevo para seguir.");
+    }
+    renderAll();
+  });
   const btnAll = el.querySelector("#btnTransAll");
   if(btnAll) btnAll.addEventListener("click", ()=>{ btnAll.disabled = true; transcribeAllPending(); });
   el.querySelectorAll("[data-trans]").forEach(b=>{
@@ -823,7 +900,6 @@ async function renderBitacora(){
         await transcribeEntry(entry, (s)=>{ row.firstElementChild.textContent = s; });
         toast("Transcripción lista");
       }catch(err){
-        console.error(err);
         toast("Falló. Verificá la conexión y reintentá.");
         b.disabled = false;
       }
@@ -849,9 +925,7 @@ async function renderFotos(){
     return;
   }
   photos.sort((a,b)=> b.ts.localeCompare(a.ts));
-  el.innerHTML = `<div class="photo-grid" style="grid-template-columns:repeat(3,1fr);">${
-    photos.map(p=>`<img src="${URL.createObjectURL(p.blob)}" title="${escapeHtml(p.loc||'')}">`).join("")
-  }</div>`;
+  el.innerHTML = `<div class="photo-grid">${photos.map(p=>photoTag(p, `title="${escapeHtml(p.loc||'')}"`)).join("")}</div>`;
 }
 
 async function renderResumen(){
@@ -865,7 +939,6 @@ async function renderResumen(){
   const byDay = {};
   items.forEach(it=>{ (byDay[it.dateKey]=byDay[it.dateKey]||[]).push(it); });
   const days = Object.keys(byDay).sort();
-
   let html = "";
   days.forEach(day=>{
     const dayItems = byDay[day].sort((a,b)=>a.ts.localeCompare(b.ts));
@@ -873,7 +946,7 @@ async function renderResumen(){
     const notes = dayItems.filter(x=>x.type!=="foto");
     html += `<div class="resumen-day"><h2>${fmtDayLabel(day)}</h2>`;
     if(pics.length){
-      html += `<div class="photo-grid">${pics.map(p=>`<img src="${URL.createObjectURL(p.blob)}">`).join("")}</div>`;
+      html += `<div class="photo-grid">${pics.map(p=>photoTag(p)).join("")}</div>`;
     }
     if(notes.length){
       html += `<div class="notes">${notes.map(n=>{
@@ -882,7 +955,7 @@ async function renderResumen(){
           if(n.transcript){
             return `<p><span class="t">${t}${n.loc?" · "+escapeHtml(n.loc):""} · 🎙️ audio</span>${escapeHtml(n.transcript)}</p>`;
           }
-          return `<p><span class="t">${t}${n.loc?" · "+escapeHtml(n.loc):""}</span>🎙️ <audio controls src="${URL.createObjectURL(n.audioBlob)}" style="width:100%;vertical-align:middle;margin-top:4px;"></audio></p>`;
+          return `<p><span class="t">${t}${n.loc?" · "+escapeHtml(n.loc):""}</span>🎙️ <audio controls src="${photoUrl(n.audioBlob)}" style="width:100%;vertical-align:middle;margin-top:4px;"></audio></p>`;
         }
         return `<p><span class="t">${t}${n.loc?" · "+escapeHtml(n.loc):""}</span>${escapeHtml(n.text)}</p>`;
       }).join("")}</div>`;
@@ -914,12 +987,7 @@ document.getElementById("btnExport").addEventListener("click", async ()=>{
     delete copy.blob;
     photosOut.push(copy);
   }
-  const data = {
-    trips,
-    exportedAt: new Date().toISOString(),
-    entries: entriesOut,
-    photos: photosOut
-  };
+  const data = { trips, exportedAt: new Date().toISOString(), entries: entriesOut, photos: photosOut };
   const blob = new Blob([JSON.stringify(data)], {type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
@@ -933,8 +1001,7 @@ document.getElementById("importFile").addEventListener("change", async (e)=>{
   const file = e.target.files[0];
   if(!file) return;
   try{
-    const text = await file.text();
-    const data = JSON.parse(text);
+    const data = JSON.parse(await file.text());
     if(!confirm("Esto va a AGREGAR los viajes y entradas del archivo a los que ya tenés. ¿Continuar?")) { e.target.value=""; return; }
     for(const t of (data.trips || [])){
       if(!trips.find(x=>x.id===t.id)) trips.push(t);
@@ -962,7 +1029,7 @@ document.getElementById("importFile").addEventListener("change", async (e)=>{
 });
 
 openDB().then(initTrips).then(renderAll).catch(()=>{
-  document.getElementById("view-bitacora").innerHTML = `<div class="empty">Este navegador no permite guardar datos localmente (IndexedDB). Probá abrir el archivo en Chrome.</div>`;
+  document.getElementById("view-bitacora").innerHTML = `<div class="empty">Este navegador no permite guardar datos localmente. Probá abrirla en Chrome.</div>`;
 });
 
 })();
