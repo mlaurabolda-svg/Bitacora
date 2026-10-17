@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#16262c">
+<title>Bitácora de Viaje</title>
+<!-- bitacora v2.0 -->
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<style>
+:root{
+  --night:#16262c; --night-2:#1e363f; --paper:#f6f3ea; --paper-dim:#e8e2d0;
+  --stamp:#b23a2e; --stamp-dark:#8f2c22; --gold:#c9973e; --ink:#22201b;
+  --ink-soft:#5b564a; --line:#d8cfb8; --card:#fffdf8;
+  --serif: Georgia, 'Iowan Old Style', 'Palatino Linotype', serif;
+  --mono: 'SFMono-Regular', Menlo, Consolas, 'Liberation Mono', monospace;
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{margin:0; padding:0; background:var(--night);}
+body{font-family:var(--sans); color:var(--ink); overflow-x:hidden;}
+button{font:inherit; color:inherit;}
+#app{max-width:600px; margin:0 auto; min-height:100vh; background:var(--paper); position:relative;}
+
+header.top{background:var(--night); color:var(--paper); padding:20px 18px 24px; position:relative;}
+header.top::after{content:""; position:absolute; left:0; right:0; bottom:-13px; height:14px;
+  background:radial-gradient(circle at 10px 0, transparent 9px, var(--night) 9.5px) repeat-x; background-size:20px 14px;}
+.eyebrow{font-family:var(--mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--gold); margin-bottom:6px;}
+.trip-btn{display:flex; align-items:center; gap:8px; background:none; border:none; padding:0; cursor:pointer; text-align:left; color:var(--paper);}
+.trip-btn h1{font-family:var(--serif); font-size:27px; margin:0; line-height:1.15;}
+.trip-btn .chev{color:var(--gold); font-size:15px;}
+.sub{font-family:var(--mono); font-size:12px; color:rgba(246,243,234,.65); margin-top:8px;}
+
+nav.tabs{display:flex; background:var(--paper); border-bottom:1px solid var(--line); position:sticky; top:0; z-index:20; margin-top:13px;}
+nav.tabs button{flex:1; border:none; background:transparent; font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase; padding:13px 4px 11px; color:var(--ink-soft); border-bottom:3px solid transparent; cursor:pointer;}
+nav.tabs button.active{color:var(--stamp); border-bottom-color:var(--stamp); font-weight:700;}
+
+main{padding:16px 14px 120px;}
+.empty{text-align:center; padding:56px 20px; color:var(--ink-soft); font-family:var(--serif); font-size:16px; line-height:1.6;}
+.empty .big{font-size:38px; display:block; margin-bottom:10px;}
+
+.banner{background:var(--night); color:var(--paper); border-radius:10px; padding:12px 14px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:13.5px; line-height:1.4;}
+.banner.warm{background:#5a3d16;}
+.btn-mini{font-family:var(--mono); font-size:11px; border:1px solid var(--stamp); background:transparent; color:var(--stamp); padding:6px 10px; border-radius:6px; cursor:pointer; text-transform:uppercase; letter-spacing:.04em; white-space:nowrap;}
+.banner .btn-mini{border-color:var(--gold); color:var(--gold);}
+.btn-mini:disabled{opacity:.45;}
+
+.day{margin-bottom:10px; border:1px solid var(--line); border-radius:10px; background:var(--card); overflow:hidden;}
+.day-head{display:flex; align-items:center; gap:10px; width:100%; border:none; background:transparent; padding:12px 14px; cursor:pointer; text-align:left;}
+.day-head .tag{font-family:var(--mono); font-size:10.5px; background:var(--night); color:var(--paper); padding:3px 8px; border-radius:3px;}
+.day-head .label{flex:1; font-family:var(--serif); font-size:16px; font-weight:700; text-transform:capitalize;}
+.day-head .counts{font-family:var(--mono); font-size:11px; color:var(--ink-soft); white-space:nowrap;}
+.day-head .arrow{color:var(--ink-soft); transition:transform .2s;}
+.day.open .day-head .arrow{transform:rotate(90deg);}
+.day-body{padding:0 12px 12px; display:none;}
+.day.open .day-body{display:block;}
+
+.card{border-top:1px solid var(--line); padding:11px 2px 9px; position:relative;}
+.card:first-child{border-top:none;}
+.meta{display:flex; align-items:center; gap:7px; font-family:var(--mono); font-size:11px; color:var(--ink-soft); margin-bottom:6px; padding-right:56px;}
+.meta .time{color:var(--stamp); font-weight:700;}
+.meta .loc{overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+.card-actions{position:absolute; top:6px; right:0; display:flex; gap:2px;}
+.card-actions button{border:none; background:none; color:#b9ae94; font-size:14px; padding:5px; cursor:pointer;}
+.text{font-family:var(--serif); font-size:15.5px; line-height:1.5; white-space:pre-wrap;}
+.transcript{font-family:var(--serif); font-size:14.5px; line-height:1.5; margin-top:7px; padding:7px 10px; background:var(--paper); border-left:2px solid var(--gold); white-space:pre-wrap;}
+.pending{font-family:var(--mono); font-size:11px; color:var(--ink-soft); margin-top:7px; display:flex; align-items:center; gap:8px;}
+
+.grid{display:grid; grid-template-columns:repeat(3,1fr); gap:4px;}
+.thumb{aspect-ratio:1/1; border-radius:6px; background:var(--paper-dim); overflow:hidden; position:relative; cursor:pointer;}
+.thumb img{width:100%; height:100%; object-fit:cover; display:block;}
+
+.fab{position:fixed; bottom:22px; right:max(18px, calc(50% - 282px)); z-index:30;}
+.fab > button{width:58px; height:58px; border-radius:50%; background:var(--stamp); color:#fff; border:none; font-size:28px; box-shadow:0 6px 16px rgba(178,58,46,.4); cursor:pointer;}
+.fab-menu{position:absolute; bottom:70px; right:0; display:none; flex-direction:column; gap:8px; align-items:flex-end;}
+.fab-menu.open{display:flex;}
+.fab-menu button{display:flex; align-items:center; gap:8px; background:var(--night); color:var(--paper); border:none; padding:10px 16px; border-radius:24px; font-size:14px; box-shadow:0 4px 10px rgba(0,0,0,.25); cursor:pointer; white-space:nowrap;}
+
+.backdrop{position:fixed; inset:0; background:rgba(22,38,44,.55); display:none; align-items:flex-end; justify-content:center; z-index:50;}
+.backdrop.open{display:flex;}
+.sheet{background:var(--paper); width:100%; max-width:600px; border-radius:16px 16px 0 0; padding:18px 18px 24px; max-height:90vh; overflow-y:auto; display:none;}
+.sheet.show{display:block;}
+.sheet h3{font-family:var(--serif); margin:0 0 14px; font-size:19px;}
+.field{margin-bottom:12px;}
+.field label{display:block; font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-soft); margin-bottom:5px;}
+.field textarea,.field input{width:100%; font-family:var(--serif); font-size:16px; border:1px solid var(--line); border-radius:8px; padding:10px 11px; background:var(--card);}
+.field textarea{min-height:100px; resize:vertical;}
+.actions{display:flex; gap:10px; margin-top:8px;}
+.actions button{flex:1; padding:13px; border-radius:8px; border:none; font-weight:600; font-size:15px; cursor:pointer;}
+.actions .cancel{background:var(--paper-dim);}
+.actions .save{background:var(--stamp); color:#fff;}
+.actions .save:disabled{opacity:.5;}
+.pick{display:block; width:100%; border:1.5px dashed var(--line); border-radius:10px; padding:16px; text-align:center; font-family:var(--mono); font-size:12.5px; color:var(--ink-soft); background:transparent; cursor:pointer; margin-bottom:8px;}
+.preview{display:flex; gap:6px; flex-wrap:wrap; margin:6px 0 12px; font-family:var(--mono); font-size:12px; color:var(--ink-soft);}
+.rec-row{display:flex; align-items:center; gap:12px; margin-bottom:12px;}
+.rec-btn{width:58px; height:58px; border-radius:50%; border:none; background:var(--stamp); color:#fff; font-size:22px; cursor:pointer;}
+.rec-btn.on{background:var(--stamp-dark); animation:pulse 1.1s infinite;}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(178,58,46,.5)}70%{box-shadow:0 0 0 14px rgba(178,58,46,0)}100%{box-shadow:0 0 0 0 rgba(178,58,46,0)}}
+.live{font-family:var(--serif); font-size:14px; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:9px 11px; min-height:44px; margin-bottom:12px; white-space:pre-wrap;}
+.hint{color:var(--ink-soft); font-style:italic; font-size:13px;}
+.trip-row{display:flex; align-items:center; gap:6px; border-bottom:1px solid var(--line); padding:6px 0;}
+.trip-row .go{flex:1; text-align:left; border:none; background:none; padding:10px 4px; font-family:var(--serif); font-size:16px; cursor:pointer;}
+.trip-row.cur .go{font-weight:700; color:var(--stamp);}
+.trip-row .icon{border:none; background:none; font-size:16px; padding:8px; cursor:pointer;}
+.list-btn{display:block; width:100%; text-align:left; border:1px solid var(--line); background:var(--card); border-radius:10px; padding:13px 14px; margin-bottom:8px; font-size:15px; cursor:pointer;}
+.list-btn small{display:block; color:var(--ink-soft); font-size:12.5px; margin-top:3px;}
+
+.toast{position:fixed; bottom:96px; left:50%; transform:translateX(-50%); background:var(--night); color:var(--paper); padding:10px 18px; border-radius:20px; font-size:13.5px; opacity:0; pointer-events:none; transition:opacity .25s; z-index:90; max-width:90vw; text-align:center;}
+.toast.show{opacity:1;}
+#viewer{position:fixed; inset:0; background:rgba(0,0,0,.94); z-index:80; display:none; align-items:center; justify-content:center;}
+#viewer img{max-width:100%; max-height:100%; object-fit:contain;}
+#busy{position:fixed; inset:0; background:rgba(22,38,44,.7); z-index:95; display:none; align-items:center; justify-content:center; color:#fff; font-size:15px; text-align:center; padding:30px;}
+
+#print{display:none;}
+@media print{
+  body{background:#fff;}
+  #app, .fab, .backdrop, #viewer, .toast, #busy{display:none !important;}
+  #print{display:block;}
+  .p-title{font-family:var(--serif); font-size:28px; margin:0 0 20px;}
+  .p-day{page-break-inside:avoid; margin-bottom:24px;}
+  .p-day h2{font-family:var(--serif); font-size:19px; border-bottom:2px solid var(--stamp); padding-bottom:4px; text-transform:capitalize;}
+  .p-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-bottom:8px;}
+  .p-grid img{width:100%; aspect-ratio:1/1; object-fit:cover;}
+  .p-note{font-family:var(--serif); font-size:13px; margin:0 0 6px; padding-left:8px; border-left:2px solid var(--gold);}
+  .p-note b{font-family:var(--mono); font-size:10px; color:var(--stamp); display:block;}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="top">
+    <div class="eyebrow">Bitácora de viaje</div>
+    <button class="trip-btn" id="tripBtn"><h1 id="tripName">Mi viaje</h1><span class="chev">▾</span></button>
+    <div class="sub" id="tripSub">Tocá el nombre para cambiar de viaje</div>
+  </header>
+  <nav class="tabs">
+    <button data-view="log" class="active">Bitácora</button>
+    <button data-view="photos">Fotos</button>
+    <button data-view="more">Resumen</button>
+  </nav>
+  <main id="main"></main>
+</div>
+
+<div class="fab">
+  <div class="fab-menu" id="fabMenu">
+    <button data-new="photo">📷 Fotos</button>
+    <button data-new="audio">🎙️ Audio</button>
+    <button data-new="text">✍️ Texto</button>
+  </div>
+  <button id="fabBtn" aria-label="Agregar">+</button>
+</div>
+
+<div class="backdrop" id="backdrop">
+  <div class="sheet" id="sh-text">
+    <h3 id="textTitle">✍️ Nota de texto</h3>
+    <div class="field"><label>Qué pasó</label><textarea id="textBody" placeholder="Lo que quieras recordar..."></textarea></div>
+    <div class="field"><label>Lugar (opcional)</label><input id="textLoc" placeholder="Ej: Cerro Campanario"></div>
+    <div class="field"><label>Fecha y hora</label><input type="datetime-local" id="textDate"></div>
+    <div class="actions"><button class="cancel" data-close>Cancelar</button><button class="save" id="textSave">Guardar</button></div>
+  </div>
+
+  <div class="sheet" id="sh-audio">
+    <h3>🎙️ Nota de audio</h3>
+    <div class="rec-row"><button class="rec-btn" id="recBtn">●</button><span id="recStatus" class="hint">Tocá para grabar</span></div>
+    <div class="live" id="live"><span class="hint">Con señal vas a ver el texto mientras hablás. Sin señal, el audio se guarda y lo transcribís después.</span></div>
+    <div class="field"><label>Lugar (opcional)</label><input id="audioLoc" placeholder="Ej: Ruta 40, km 1200"></div>
+    <div class="field"><label>Fecha y hora</label><input type="datetime-local" id="audioDate"></div>
+    <div class="actions"><button class="cancel" data-close>Cancelar</button><button class="save" id="audioSave">Guardar</button></div>
+  </div>
+
+  <div class="sheet" id="sh-photo">
+    <h3>📷 Fotos</h3>
+    <button class="pick" id="pickGallery">🖼️ Elegir de la galería (varias)</button>
+    <button class="pick" id="pickCamera">📸 Sacar una foto ahora</button>
+    <input type="file" id="inGallery" accept="image/*" multiple hidden>
+    <input type="file" id="inCamera" accept="image/*" capture="environment" hidden>
+    <div class="preview" id="photoPreview"></div>
+    <div class="field"><label>Lugar / pie de foto (opcional)</label><input id="photoLoc" placeholder="Ej: Playa al atardecer"></div>
+    <div class="field"><label>Fecha y hora</label><input type="datetime-local" id="photoDate"></div>
+    <div class="actions"><button class="cancel" data-close>Cancelar</button><button class="save" id="photoSave">Guardar</button></div>
+  </div>
+
+  <div class="sheet" id="sh-trips">
+    <h3>🧳 Mis viajes</h3>
+    <div id="tripList"></div>
+    <div class="field" style="margin-top:14px"><label>Viaje nuevo</label><input id="newTrip" placeholder="Ej: Patagonia 2026"></div>
+    <div class="actions"><button class="cancel" data-close>Cerrar</button><button class="save" id="tripCreate">Crear viaje</button></div>
+  </div>
+</div>
+
+<div id="viewer"><img id="viewerImg" alt=""></div>
+<div id="busy"><div id="busyText">Un momento...</div></div>
+<div class="toast" id="toast"></div>
+<div id="print"></div>
+<input type="file" id="inRestore" accept=".bitacora,.txt,.json,application/json,text/plain" hidden>
+
+<script>
+(function(){
+"use strict";
+
+/* ============ BASE DE DATOS ============
+   entries: solo datos livianos (texto, fecha, lugar). Nunca fotos ni audios.
+   media:   los archivos pesados, por separado. Se leen de a uno, solo cuando hacen falta. */
+const DB_NAME = "bitacoraV2";
+let db;
+function openDB(){
+  return new Promise((res, rej)=>{
+    const r = indexedDB.open(DB_NAME, 1);
+    r.onupgradeneeded = ()=>{
+      const d = r.result;
+      d.createObjectStore("trips", {keyPath:"id"});
+      const e = d.createObjectStore("entries", {keyPath:"id", autoIncrement:true});
+      e.createIndex("trip", "tripId");
+      d.createObjectStore("media");
+      d.createObjectStore("meta");
+    };
+    r.onsuccess = ()=>{ db = r.result; res(); };
+    r.onerror = ()=>rej(r.error);
+  });
+}
+function req(r){ return new Promise((res, rej)=>{ r.onsuccess = ()=>res(r.result); r.onerror = ()=>rej(r.error); }); }
+function store(name, mode){ return db.transaction(name, mode||"readonly").objectStore(name); }
+const dbGet = (s,k)=>req(store(s).get(k));
+const dbAll = (s)=>req(store(s).getAll());
+const dbPut = (s,v,k)=>req(k===undefined ? store(s,"readwrite").put(v) : store(s,"readwrite").put(v,k));
+const dbDel = (s,k)=>req(store(s,"readwrite").delete(k));
+const entriesOfTrip = (tid)=>req(store("entries").index("trip").getAll(tid));
+function saveEntryWithMedia(entry, mediaMap){
+  return new Promise((res, rej)=>{
+    const tx = db.transaction(["entries","media"], "readwrite");
+    let id;
+    const r = tx.objectStore("entries").add(entry);
+    r.onsuccess = ()=>{
+      id = r.result;
+      for(const kind in mediaMap) tx.objectStore("media").put(mediaMap[kind], id+":"+kind);
+    };
+    tx.oncomplete = ()=>res(id);
+    tx.onerror = ()=>rej(tx.error);
+    tx.onabort = ()=>rej(tx.error || new Error("No se pudo guardar"));
+  });
+}
+function deleteEntry(id){
+  return new Promise((res, rej)=>{
+    const tx = db.transaction(["entries","media"], "readwrite");
+    tx.objectStore("entries").delete(id);
+    ["full","thumb","audio"].forEach(k=>tx.objectStore("media").delete(id+":"+k));
+    tx.oncomplete = res; tx.onerror = ()=>rej(tx.error);
+  });
+}
+
+/* ============ UTILIDADES ============ */
+const $ = (id)=>document.getElementById(id);
+const esc = (s)=>(s||"").replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const pad = (n)=>String(n).padStart(2,"0");
+const dayKey = (d)=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const fmtTime = (iso)=>new Date(iso).toLocaleTimeString("es-AR",{hour:"2-digit",minute:"2-digit"});
+const fmtDay = (k)=>new Date(k+"T12:00:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long"});
+const fmtDayLong = (k)=>new Date(k+"T12:00:00").toLocaleDateString("es-AR",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+function localInput(d){ d = new Date(d); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,16); }
+function fromInput(v){ return v ? new Date(v) : new Date(); }
+let toastT;
+function toast(m){ const t=$("toast"); t.textContent=m; t.classList.add("show"); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove("show"), 2600); }
+function busy(msg){ if(msg){ $("busyText").textContent = msg; $("busy").style.display="flex"; } else $("busy").style.display="none"; }
+
+async function shrink(blob, max, q){
+  const bmp = await createImageBitmap(blob);
+  const s = Math.min(1, max/Math.max(bmp.width, bmp.height));
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(bmp.width*s)); c.height = Math.max(1, Math.round(bmp.height*s));
+  c.getContext("2d").drawImage(bmp, 0, 0, c.width, c.height);
+  bmp.close && bmp.close();
+  const out = await new Promise(r=>c.toBlob(r, "image/jpeg", q));
+  c.width = c.height = 0;
+  if(!out) throw new Error("no se pudo procesar la imagen");
+  return out;
+}
+const makeFull = (b)=>shrink(b, 1600, 0.8);
+const makeThumb = (b)=>shrink(b, 400, 0.72);
+
+/* ============ ESTADO ============ */
+let trips = [], tripId = null, view = "log";
+let openDays = new Set();
+let saving = false;
+
+async function loadTrips(){
+  trips = (await dbAll("trips")).sort((a,b)=>a.created.localeCompare(b.created));
+  if(!trips.length){
+    const t = {id:"t"+Date.now(), name:"Mi viaje", created:new Date().toISOString()};
+    await dbPut("trips", t); trips = [t];
+  }
+  tripId = localStorage.getItem("bv2_trip");
+  if(!trips.find(t=>t.id===tripId)) tripId = trips[trips.length-1].id;
+  localStorage.setItem("bv2_trip", tripId);
+}
+const curTrip = ()=>trips.find(t=>t.id===tripId);
+
+/* ============ MINIATURAS: se cargan solo cuando aparecen en pantalla ============ */
+const urls = new Map();
+const io = new IntersectionObserver(async (items)=>{
+  for(const it of items){
+    if(!it.isIntersecting) continue;
+    const el = it.target; io.unobserve(el);
+    const id = Number(el.dataset.id);
+    try{
+      const b = await dbGet("media", id+":thumb");
+      if(!b || !el.isConnected) continue;
+      const u = URL.createObjectURL(b); urls.set(el, u);
+      const img = new Image(); img.decoding = "async"; img.alt = ""; img.src = u;
+      el.appendChild(img);
+    }catch(_){}
+  }
+}, {rootMargin:"300px"});
+function releaseThumbs(root){
+  (root||document).querySelectorAll(".thumb").forEach(el=>{
+    io.unobserve(el);
+    const u = urls.get(el); if(u){ URL.revokeObjectURL(u); urls.delete(el); }
+  });
+}
+function watchThumbs(root){ root.querySelectorAll(".thumb").forEach(el=>io.observe(el)); }
+
+/* ============ PANTALLAS ============ */
+async function render(){
+  releaseThumbs();
+  stopPlayer();
+  $("tripName").textContent = curTrip().name;
+  const m = $("main");
+  const entries = await entriesOfTrip(tripId);
+  const days = {};
+  entries.forEach(e=>{ (days[e.day] = days[e.day] || []).push(e); });
+  const keys = Object.keys(days).sort().reverse();
+  const nP = entries.filter(e=>e.type==="photo").length;
+  $("tripSub").textContent = entries.length ? `${keys.length} día${keys.length!==1?"s":""} · ${nP} foto${nP!==1?"s":""} · ${entries.length-nP} nota${entries.length-nP!==1?"s":""}` : "Tocá el nombre para cambiar de viaje";
+
+  let html = await banners(entries);
+  if(view === "more"){ m.innerHTML = html + moreView(entries.length); bindMore(); return; }
+  if(!entries.length){
+    m.innerHTML = html + `<div class="empty"><span class="big">🧭</span>Todavía no hay nada en este viaje.<br>Usá el botón + para sumar una nota, un audio o fotos.</div>`;
+    bindBanners(); return;
+  }
+  const list = view==="photos" ? keys.filter(k=>days[k].some(e=>e.type==="photo")) : keys;
+  if(!list.length){ m.innerHTML = html + `<div class="empty"><span class="big">📷</span>Todavía no hay fotos en este viaje.</div>`; bindBanners(); return; }
+  if(!openDays.size) openDays.add(list[0]);
+  html += list.map(k=>{
+    const its = days[k];
+    const c = {text:0,audio:0,photo:0}; its.forEach(e=>c[e.type]++);
+    const counts = view==="photos" ? `📷 ${c.photo}` : [c.text?`✍️${c.text}`:"", c.audio?`🎙️${c.audio}`:"", c.photo?`📷${c.photo}`:""].filter(Boolean).join(" ");
+    return `<div class="day ${openDays.has(k)?"open":""}" data-day="${k}">
+      <button class="day-head"><span class="label">${fmtDay(k)}</span><span class="counts">${counts}</span><span class="arrow">▸</span></button>
+      <div class="day-body"></div></div>`;
+  }).join("");
+  m.innerHTML = html;
+  bindBanners();
+  m.querySelectorAll(".day").forEach(d=>{
+    const k = d.dataset.day;
+    d.querySelector(".day-head").onclick = ()=>{
+      if(openDays.has(k)){ openDays.delete(k); d.classList.remove("open"); releaseThumbs(d); d.querySelector(".day-body").innerHTML=""; }
+      else { openDays.add(k); d.classList.add("open"); fillDay(d, days[k]); }
+    };
+    if(openDays.has(k)) fillDay(d, days[k]);
+  });
+}
+
+function fillDay(dayEl, items){
+  const body = dayEl.querySelector(".day-body");
+  items = items.slice().sort((a,b)=>a.ts.localeCompare(b.ts));
+  if(view === "photos"){
+    body.innerHTML = `<div class="grid">${items.filter(e=>e.type==="photo").map(e=>`<div class="thumb" data-id="${e.id}"></div>`).join("")}</div>`;
+    watchThumbs(body); return;
+  }
+  let html = "", i = 0;
+  while(i < items.length){
+    const e = items[i];
+    const meta = (ic)=>`<div class="meta"><span>${ic}</span><span class="time">${fmtTime(e.ts)}</span>${e.loc?`<span class="loc">· ${esc(e.loc)}</span>`:""}</div>`;
+    if(e.type === "photo"){
+      const g = [e]; let j = i+1;
+      while(j<items.length && items[j].type==="photo" && items[j].group && items[j].group===e.group){ g.push(items[j]); j++; }
+      html += `<div class="card">${meta("📷")}<div class="card-actions"><button data-delgroup="${g.map(x=>x.id).join(",")}" title="Borrar">✕</button></div>
+        <div class="grid">${g.map(x=>`<div class="thumb" data-id="${x.id}"></div>`).join("")}</div></div>`;
+      i = j; continue;
+    }
+    if(e.type === "audio"){
+      const tr = e.transcript ? `<div class="transcript">${esc(e.transcript)}</div>`
+        : `<div class="pending">⏳ Sin transcribir <button class="btn-mini" data-trans="${e.id}">Transcribir</button></div>`;
+      html += `<div class="card">${meta("🎙️")}<div class="card-actions"><button data-edit="${e.id}" title="Editar">✏️</button><button data-del="${e.id}" title="Borrar">✕</button></div>
+        <button class="btn-mini" data-play="${e.id}">▶ Escuchar</button>${tr}</div>`;
+    } else {
+      html += `<div class="card">${meta("✍️")}<div class="card-actions"><button data-edit="${e.id}" title="Editar">✏️</button><button data-del="${e.id}" title="Borrar">✕</button></div>
+        <div class="text">${esc(e.text)}</div></div>`;
+    }
+    i++;
+  }
+  body.innerHTML = html;
+  watchThumbs(body);
+}
+
+/* ============ AVISOS (importar, copia, transcribir) ============ */
+let oldInfo = null;
+async function checkOld(){
+  if(localStorage.getItem("bv2_imported")) return null;
+  try{
+    if(indexedDB.databases){
+      const list = await indexedDB.databases();
+      if(!list.some(d=>d.name==="bitacoraViajeDB")) return null;
+    }
+    const old = await new Promise((res)=>{ const r = indexedDB.open("bitacoraViajeDB"); r.onsuccess=()=>res(r.result); r.onerror=()=>res(null); });
+    if(!old) return null;
+    if(!old.objectStoreNames.contains("photos") || !old.objectStoreNames.contains("entries")){ old.close(); return null; }
+    const tx = old.transaction(["photos","entries"]);
+    const [p, e] = await Promise.all([req(tx.objectStore("photos").count()), req(tx.objectStore("entries").count())]);
+    old.close();
+    return (p||e) ? {photos:p, entries:e} : null;
+  }catch(_){ return null; }
+}
+async function banners(entries){
+  let h = "";
+  if(oldInfo) h += `<div class="banner warm"><span>📦 Tenés una bitácora anterior: ${oldInfo.photos} fotos y ${oldInfo.entries} notas.</span><button class="btn-mini" id="bnImport">Traer</button></div>`;
+  const pend = entries.filter(e=>e.type==="audio" && !e.transcript).length;
+  if(pend && view==="log") h += `<div class="banner"><span>🎙️ ${pend} audio${pend>1?"s":""} sin transcribir</span><button class="btn-mini" id="bnTrans">Transcribir</button></div>`;
+  const last = Number(localStorage.getItem("bv2_backup")||0);
+  const lastAdd = Number(localStorage.getItem("bv2_lastadd")||0);
+  if(lastAdd > last && Date.now()-last > 3*86400000 && entries.length) h += `<div class="banner"><span>💾 Hace días que no hacés copia de seguridad.</span><button class="btn-mini" id="bnBackup">Hacer</button></div>`;
+  return h;
+}
+function bindBanners(){
+  const a = $("bnImport"); if(a) a.onclick = importOld;
+  const b = $("bnTrans"); if(b) b.onclick = ()=>transcribeAll(b);
+  const c = $("bnBackup"); if(c) c.onclick = exportBackup;
+}
+
+function moreView(n){
+  return `<button class="list-btn" id="mPrint">📖 Fotolibro / PDF de este viaje<small>Arma una página por día con fotos y notas. En la ventana de imprimir elegí "Guardar como PDF".</small></button>
+  <button class="list-btn" id="mBackup">💾 Copia de seguridad de este viaje<small>Descarga un archivo con todo (fotos, audios y notas). Guardalo en Drive o en la PC.</small></button>
+  <button class="list-btn" id="mRestore">📂 Restaurar una copia<small>Agrega un viaje desde un archivo de copia.</small></button>
+  <button class="list-btn" id="mStorage">📊 Espacio usado<small id="storageInfo">Tocá para ver</small></button>`;
+}
+function bindMore(){
+  bindBanners();
+  $("mPrint").onclick = printBook;
+  $("mBackup").onclick = exportBackup;
+  $("mRestore").onclick = ()=>$("inRestore").click();
+  $("mStorage").onclick = async ()=>{
+    if(!navigator.storage || !navigator.storage.estimate){ $("storageInfo").textContent = "No disponible en este navegador"; return; }
+    const e = await navigator.storage.estimate();
+    $("storageInfo").textContent = `${(e.usage/1048576).toFixed(0)} MB usados de ${(e.quota/1048576/1024).toFixed(1)} GB disponibles`;
+  };
+}
+
+/* ============ NAVEGACIÓN ============ */
+document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick = ()=>{
+  document.querySelectorAll("nav.tabs button").forEach(x=>x.classList.toggle("active", x===b));
+  view = b.dataset.view; openDays.clear(); render(); window.scrollTo(0,0);
+});
+$("fabBtn").onclick = ()=>$("fabMenu").classList.toggle("open");
+document.querySelectorAll("[data-new]").forEach(b=>b.onclick = ()=>{ $("fabMenu").classList.remove("open"); openSheet(b.dataset.new); });
+
+let editing = null;
+function openSheet(kind, entry){
+  document.querySelectorAll(".sheet").forEach(s=>s.classList.remove("show"));
+  $("sh-"+kind).classList.add("show");
+  $("backdrop").classList.add("open");
+  const now = localInput(entry ? entry.ts : new Date());
+  if(kind==="text"){
+    editing = entry || null;
+    $("textTitle").textContent = entry ? (entry.type==="audio" ? "✏️ Corregir transcripción" : "✏️ Editar nota") : "✍️ Nota de texto";
+    $("textBody").value = entry ? (entry.type==="audio" ? (entry.transcript||"") : entry.text) : "";
+    $("textLoc").value = entry ? (entry.loc||"") : "";
+    $("textDate").value = now;
+  }
+  if(kind==="audio"){ $("audioDate").value = now; }
+  if(kind==="photo"){ $("photoDate").value = now; }
+  if(kind==="trips") renderTrips();
+}
+function closeSheets(){
+  $("backdrop").classList.remove("open");
+  document.querySelectorAll(".sheet").forEach(s=>s.classList.remove("show"));
+  ["textBody","textLoc","audioLoc","photoLoc","newTrip"].forEach(id=>$(id).value="");
+  editing = null; pendingFiles = []; $("photoPreview").textContent = "";
+  stopRecording(true);
+}
+$("backdrop").onclick = (e)=>{ if(e.target===$("backdrop")) closeSheets(); };
+document.querySelectorAll("[data-close]").forEach(b=>b.onclick = closeSheets);
+function touched(){ localStorage.setItem("bv2_lastadd", String(Date.now())); }
+
+/* ============ TEXTO ============ */
+$("textSave").onclick = async ()=>{
+  if(saving) return;
+  const text = $("textBody").value.trim();
+  if(!text && !(editing && editing.type==="audio")){ toast("Escribí algo primero"); return; }
+  saving = true; $("textSave").disabled = true;
+  try{
+    const d = fromInput($("textDate").value);
+    if(editing){
+      const e = await dbGet("entries", editing.id);
+      if(e.type==="audio") e.transcript = text || null; else e.text = text;
+      e.loc = $("textLoc").value.trim(); e.ts = d.toISOString(); e.day = dayKey(d);
+      await dbPut("entries", e);
+    } else {
+      await saveEntryWithMedia({tripId, type:"text", text, loc:$("textLoc").value.trim(), ts:d.toISOString(), day:dayKey(d)}, {});
+    }
+    touched(); openDays.add(dayKey(d)); toast("Guardado"); closeSheets(); render();
+  }catch(err){ toast("No se pudo guardar: "+err.message); }
+  saving = false; $("textSave").disabled = false;
+};
+
+/* ============ AUDIO ============ */
+let rec = null, recStream = null, chunks = [], recBlob = null, recMime = "", speech = null, speechText = "";
+function pickMime(){
+  if(!window.MediaRecorder || !MediaRecorder.isTypeSupported) return "";
+  return ["audio/webm;codecs=opus","audio/webm","audio/mp4","audio/ogg;codecs=opus"].find(m=>MediaRecorder.isTypeSupported(m)) || "";
+}
+function stopRecording(discard){
+  try{ if(rec && rec.state==="recording"){ if(discard) rec.onstop = null; rec.stop(); } }catch(_){}
+  if(recStream){ recStream.getTracks().forEach(t=>t.stop()); recStream = null; }
+  if(speech){ try{ speech.onend = null; speech.stop(); }catch(_){} speech = null; }
+  $("recBtn").classList.remove("on");
+  if(discard){ rec = null; recBlob = null; speechText = ""; $("recStatus").textContent = "Tocá para grabar";
+    $("live").innerHTML = '<span class="hint">Con señal vas a ver el texto mientras hablás. Sin señal, el audio se guarda y lo transcribís después.</span>'; }
+}
+$("recBtn").onclick = async ()=>{
+  if(rec && rec.state==="recording"){ stopRecording(false); $("recStatus").textContent = "Listo. Podés guardar o grabar de nuevo."; return; }
+  if(!window.MediaRecorder){ toast("Este navegador no puede grabar audio"); return; }
+  try{ recStream = await navigator.mediaDevices.getUserMedia({audio:true}); }
+  catch(err){ toast("No hay acceso al micrófono. Abrí la app desde el ícono o desde https://"); return; }
+  chunks = []; recBlob = null; speechText = "";
+  recMime = pickMime();
+  try{ rec = recMime ? new MediaRecorder(recStream, {mimeType:recMime}) : new MediaRecorder(recStream); }
+  catch(err){ toast("No se pudo iniciar la grabación"); stopRecording(true); return; }
+  rec.ondataavailable = (e)=>{ if(e.data && e.data.size) chunks.push(e.data); };
+  rec.onstop = ()=>{ recBlob = new Blob(chunks, {type: rec.mimeType || recMime || "audio/webm"}); };
+  rec.start(1000);
+  $("recBtn").classList.add("on"); $("recStatus").textContent = "Grabando... tocá para terminar";
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(SR && navigator.onLine){
+    speech = new SR(); speech.lang = "es-AR"; speech.continuous = true; speech.interimResults = true;
+    speech.onresult = (e)=>{ let tmp=""; for(let i=e.resultIndex;i<e.results.length;i++){ if(e.results[i].isFinal) speechText += e.results[i][0].transcript+" "; else tmp += e.results[i][0].transcript; } $("live").textContent = (speechText+tmp).trim() || "…"; };
+    speech.onerror = ()=>{};
+    speech.onend = ()=>{ if(rec && rec.state==="recording"){ try{ speech.start(); }catch(_){} } };
+    try{ speech.start(); $("live").textContent = "Escuchando…"; }catch(_){}
+  } else {
+    $("live").innerHTML = '<span class="hint">Sin señal: el audio se guarda igual y lo transcribís después.</span>';
+  }
+};
+$("audioSave").onclick = async ()=>{
+  if(saving) return;
+  if(rec && rec.state==="recording"){ stopRecording(false); await sleep(400); }
+  if(!recBlob || !recBlob.size){ toast("Grabá algo primero"); return; }
+  saving = true; $("audioSave").disabled = true;
+  try{
+    const d = fromInput($("audioDate").value);
+    await saveEntryWithMedia({tripId, type:"audio", loc:$("audioLoc").value.trim(), transcript: speechText.trim() || null, ts:d.toISOString(), day:dayKey(d)}, {audio: recBlob});
+    touched(); openDays.add(dayKey(d)); toast(speechText.trim() ? "Audio y texto guardados" : "Audio guardado"); rec = null; closeSheets(); render();
+  }catch(err){ toast("No se pudo guardar: "+err.message); }
+  saving = false; $("audioSave").disabled = false;
+};
+
+let player = null, playerUrl = null, playerBtn = null;
+function stopPlayer(){
+  if(player){ player.pause(); player = null; }
+  if(playerUrl){ URL.revokeObjectURL(playerUrl); playerUrl = null; }
+  if(playerBtn){ playerBtn.textContent = "▶ Escuchar"; playerBtn = null; }
+}
+
+/* ============ FOTOS ============ */
+let pendingFiles = [];
+$("pickGallery").onclick = ()=>$("inGallery").click();
+$("pickCamera").onclick = ()=>$("inCamera").click();
+function addFiles(e){
+  pendingFiles = pendingFiles.concat(Array.from(e.target.files||[]));
+  e.target.value = "";
+  $("photoPreview").textContent = pendingFiles.length ? `${pendingFiles.length} foto${pendingFiles.length>1?"s":""} elegida${pendingFiles.length>1?"s":""}` : "";
+}
+$("inGallery").onchange = addFiles;
+$("inCamera").onchange = addFiles;
+$("photoSave").onclick = async ()=>{
+  if(saving) return;
+  if(!pendingFiles.length){ toast("Elegí al menos una foto"); return; }
+  saving = true; $("photoSave").disabled = true;
+  const d = fromInput($("photoDate").value), loc = $("photoLoc").value.trim(), group = "g"+Date.now();
+  const files = pendingFiles.slice(); let ok = 0, fail = 0;
+  for(let i=0;i<files.length;i++){
+    busy(`Guardando foto ${i+1} de ${files.length}...`);
+    try{
+      const full = await makeFull(files[i]);
+      const thumb = await makeThumb(full);
+      await saveEntryWithMedia({tripId, type:"photo", group, loc, ts:d.toISOString(), day:dayKey(d)}, {full, thumb});
+      ok++;
+    }catch(_){ fail++; }
+    files[i] = null;
+    await sleep(30);
+  }
+  busy(null);
+  touched(); openDays.add(dayKey(d));
+  toast(fail ? `${ok} guardadas, ${fail} no se pudieron leer` : `${ok} foto${ok>1?"s":""} guardada${ok>1?"s":""}`);
+  saving = false; $("photoSave").disabled = false;
+  closeSheets(); render();
+};
+
+/* ============ TOQUES EN LA LISTA ============ */
+let viewerUrl = null;
+document.addEventListener("click", async (e)=>{
+  const t = e.target.closest ? e.target : null; if(!t) return;
+  const th = t.closest(".thumb");
+  if(th){
+    const b = await dbGet("media", Number(th.dataset.id)+":full");
+    if(!b) return;
+    viewerUrl = URL.createObjectURL(b); $("viewerImg").src = viewerUrl; $("viewer").style.display = "flex"; return;
+  }
+  const pl = t.closest("[data-play]");
+  if(pl){
+    if(playerBtn===pl){ stopPlayer(); return; }
+    stopPlayer();
+    const b = await dbGet("media", Number(pl.dataset.play)+":audio");
+    if(!b){ toast("No se encontró el audio"); return; }
+    playerUrl = URL.createObjectURL(b); player = new Audio(playerUrl); playerBtn = pl; pl.textContent = "■ Detener";
+    player.onended = stopPlayer;
+    player.play().catch(()=>{ toast("No se pudo reproducir"); stopPlayer(); });
+    return;
+  }
+  const del = t.closest("[data-del]");
+  if(del){ if(confirm("¿Borrar esta nota?")){ await deleteEntry(Number(del.dataset.del)); render(); } return; }
+  const dg = t.closest("[data-delgroup]");
+  if(dg){ const ids = dg.dataset.delgroup.split(",").map(Number); if(confirm(ids.length>1?`¿Borrar estas ${ids.length} fotos?`:"¿Borrar esta foto?")){ for(const id of ids) await deleteEntry(id); render(); } return; }
+  const ed = t.closest("[data-edit]");
+  if(ed){ const en = await dbGet("entries", Number(ed.dataset.edit)); if(en) openSheet("text", en); return; }
+  const tr = t.closest("[data-trans]");
+  if(tr){ transcribeOne(Number(tr.dataset.trans), tr); return; }
+});
+$("viewer").onclick = ()=>{ $("viewer").style.display = "none"; $("viewerImg").removeAttribute("src"); if(viewerUrl){ URL.revokeObjectURL(viewerUrl); viewerUrl = null; } };
+
+/* ============ VIAJES ============ */
+$("tripBtn").onclick = ()=>openSheet("trips");
+function renderTrips(){
+  $("tripList").innerHTML = trips.map(t=>`<div class="trip-row ${t.id===tripId?"cur":""}">
+    <button class="go" data-go="${t.id}">${esc(t.name)}</button>
+    <button class="icon" data-ren="${t.id}" title="Renombrar">✏️</button>
+    <button class="icon" data-rm="${t.id}" title="Borrar">🗑️</button></div>`).join("");
+  $("tripList").querySelectorAll("[data-go]").forEach(b=>b.onclick = ()=>{ tripId = b.dataset.go; localStorage.setItem("bv2_trip", tripId); openDays.clear(); closeSheets(); render(); });
+  $("tripList").querySelectorAll("[data-ren]").forEach(b=>b.onclick = async ()=>{
+    const t = trips.find(x=>x.id===b.dataset.ren); const n = prompt("Nuevo nombre:", t.name);
+    if(n && n.trim()){ t.name = n.trim(); await dbPut("trips", t); renderTrips(); render(); }
+  });
+  $("tripList").querySelectorAll("[data-rm]").forEach(b=>b.onclick = async ()=>{
+    const t = trips.find(x=>x.id===b.dataset.rm);
+    if(!confirm(`¿Borrar "${t.name}" con todas sus fotos, audios y notas? No se puede deshacer.`)) return;
+    busy("Borrando...");
+    const es = await entriesOfTrip(t.id);
+    for(const e of es) await deleteEntry(e.id);
+    await dbDel("trips", t.id);
+    busy(null);
+    await loadTrips(); renderTrips(); render();
+  });
+}
+$("tripCreate").onclick = async ()=>{
+  const n = $("newTrip").value.trim(); if(!n){ toast("Escribí un nombre"); return; }
+  const t = {id:"t"+Date.now(), name:n, created:new Date().toISOString()};
+  await dbPut("trips", t); trips.push(t); tripId = t.id; localStorage.setItem("bv2_trip", tripId);
+  openDays.clear(); closeSheets(); render(); toast("Viaje creado");
+};
+
+/* ============ TRAER LA BITÁCORA ANTERIOR ============ */
+async function importOld(){
+  if(!confirm("Voy a copiar tu bitácora anterior a esta. La vieja no se borra. Puede tardar unos minutos: no cierres la app.")) return;
+  const old = await new Promise((res,rej)=>{ const r = indexedDB.open("bitacoraViajeDB"); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); });
+  const oget = (s,k)=>req(old.transaction(s).objectStore(s).get(k));
+  const okeys = (s)=>req(old.transaction(s).objectStore(s).getAllKeys());
+  try{
+    let oldTrips = []; try{ oldTrips = JSON.parse(localStorage.getItem("bitacora_trips")||"[]"); }catch(_){}
+    const map = {};
+    async function tripFor(oldId){
+      const k = oldId || "_sin";
+      if(map[k]) return map[k];
+      const ot = oldTrips.find(t=>t.id===oldId);
+      const t = {id:"t"+Date.now()+Math.floor(Math.random()*1000), name: ot ? ot.name : (localStorage.getItem("bitacora_tripName") || "Viaje anterior"), created: ot ? ot.createdAt : new Date().toISOString()};
+      await dbPut("trips", t); map[k] = t.id; return t.id;
+    }
+    // 1) notas y audios, de a uno
+    const eKeys = await okeys("entries");
+    for(let i=0;i<eKeys.length;i++){
+      busy(`Copiando notas y audios: ${i+1} de ${eKeys.length}`);
+      const e = await oget("entries", eKeys[i]); if(!e) continue;
+      const tid = await tripFor(e.tripId);
+      const d = new Date(e.ts);
+      if(e.type==="audio" && e.audioBlob){
+        await saveEntryWithMedia({tripId:tid, type:"audio", loc:e.loc||"", transcript:e.transcript||null, ts:e.ts, day:dayKey(d)}, {audio:e.audioBlob});
+      } else if(e.type==="texto" || e.text){
+        await saveEntryWithMedia({tripId:tid, type:"text", text:e.text||"", loc:e.loc||"", ts:e.ts, day:dayKey(d)}, {});
+      }
+    }
+    // 2) fotos, de a una, sin duplicados
+    const pKeys = await okeys("photos");
+    const seen = new Set(); let fails = 0;
+    for(let i=0;i<pKeys.length;i++){
+      busy(`Copiando fotos: ${i+1} de ${pKeys.length}`);
+      const p = await oget("photos", pKeys[i]); if(!p || !p.blob) continue;
+      const sig = p.tripId+"|"+p.ts+"|"+p.loc+"|"+p.blob.size;
+      if(seen.has(sig)) continue; seen.add(sig);
+      try{
+        const full = p.optimized ? p.blob : await makeFull(p.blob);
+        const thumb = await makeThumb(full);
+        const tid = await tripFor(p.tripId);
+        await saveEntryWithMedia({tripId:tid, type:"photo", group:"old"+p.ts, loc:p.loc||"", ts:p.ts, day:dayKey(new Date(p.ts))}, {full, thumb});
+      }catch(_){ fails++; }
+      await sleep(40);
+    }
+    old.close();
+    localStorage.setItem("bv2_imported", "1"); oldInfo = null;
+    busy(null);
+    await loadTrips();
+    const first = Object.values(map)[0]; if(first){ tripId = first; localStorage.setItem("bv2_trip", tripId); }
+    openDays.clear(); render();
+    toast(fails ? `Listo. ${fails} fotos no se pudieron copiar.` : "¡Listo! Tu bitácora anterior está acá.");
+  }catch(err){
+    try{ old.close(); }catch(_){}
+    busy(null);
+    toast("Se cortó la copia: "+err.message+". Probá de nuevo.");
+  }
+}
+
+/* ============ TRANSCRIPCIÓN DIFERIDA ============ */
+let whisper = null;
+async function getWhisper(status){
+  if(whisper) return whisper;
+  if(!navigator.onLine) throw new Error("Necesitás señal la primera vez (descarga el programa de voz)");
+  status("Descargando el programa de voz (una sola vez, ~80 MB)...");
+  const { pipeline, env } = await import("https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2");
+  env.allowLocalModels = false;
+  whisper = await pipeline("automatic-speech-recognition", "Xenova/whisper-base", {
+    quantized:true,
+    progress_callback:(p)=>{ if(p.status==="progress" && p.progress) status("Descargando programa de voz: "+Math.round(p.progress)+"%"); }
+  });
+  return whisper;
+}
+async function toPCM(blob){
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const ctx = new AC();
+  const dec = await ctx.decodeAudioData(await blob.arrayBuffer());
+  ctx.close();
+  const off = new OfflineAudioContext(1, Math.ceil(dec.duration*16000), 16000);
+  const src = off.createBufferSource(); src.buffer = dec; src.connect(off.destination); src.start();
+  return (await off.startRendering()).getChannelData(0);
+}
+async function transcribeEntry(id, status){
+  const w = await getWhisper(status);
+  status("Transcribiendo...");
+  const b = await dbGet("media", id+":audio");
+  const out = await w(await toPCM(b), {language:"spanish", task:"transcribe", chunk_length_s:30, stride_length_s:5});
+  const e = await dbGet("entries", id);
+  e.transcript = ((out && out.text) || "").trim() || "(no se escuchó voz)";
+  await dbPut("entries", e);
+}
+async function transcribeOne(id, btn){
+  btn.disabled = true;
+  try{ await transcribeEntry(id, (s)=>busy(s)); busy(null); toast("Transcripción lista"); render(); }
+  catch(err){ busy(null); toast(err.message); btn.disabled = false; }
+}
+async function transcribeAll(btn){
+  btn.disabled = true;
+  const list = (await entriesOfTrip(tripId)).filter(e=>e.type==="audio" && !e.transcript);
+  try{
+    for(let i=0;i<list.length;i++) await transcribeEntry(list[i].id, (s)=>busy(`(${i+1}/${list.length}) ${s}`));
+    busy(null); toast("Transcripciones listas");
+  }catch(err){ busy(null); toast(err.message); }
+  render();
+}
+
+/* ============ FOTOLIBRO (PDF) ============ */
+async function printBook(){
+  const entries = (await entriesOfTrip(tripId)).sort((a,b)=>a.ts.localeCompare(b.ts));
+  if(!entries.length){ toast("Este viaje está vacío"); return; }
+  const days = {}; entries.forEach(e=>{ (days[e.day]=days[e.day]||[]).push(e); });
+  const p = $("print");
+  p.innerHTML = `<h1 class="p-title">${esc(curTrip().name)}</h1>` + Object.keys(days).sort().map(k=>{
+    const its = days[k];
+    return `<div class="p-day"><h2>${fmtDayLong(k)}</h2>
+      <div class="p-grid">${its.filter(e=>e.type==="photo").map(e=>`<img data-pid="${e.id}" alt="">`).join("")}</div>
+      ${its.filter(e=>e.type!=="photo").map(e=>{
+        const txt = e.type==="audio" ? (e.transcript ? e.transcript : "(audio sin transcribir)") : e.text;
+        return `<p class="p-note"><b>${fmtTime(e.ts)}${e.loc?" · "+esc(e.loc):""}${e.type==="audio"?" · audio":""}</b>${esc(txt)}</p>`;
+      }).join("")}</div>`;
+  }).join("");
+  const imgs = Array.from(p.querySelectorAll("img[data-pid]")); const made = [];
+  for(let i=0;i<imgs.length;i++){
+    busy(`Armando el fotolibro: foto ${i+1} de ${imgs.length}`);
+    const b = await dbGet("media", imgs[i].dataset.pid+":thumb");
+    if(b){ const u = URL.createObjectURL(b); made.push(u); imgs[i].src = u; await imgs[i].decode().catch(()=>{}); }
+  }
+  busy(null);
+  await sleep(300);
+  window.print();
+  setTimeout(()=>{ p.innerHTML = ""; made.forEach(u=>URL.revokeObjectURL(u)); }, 1500);
+}
+
+/* ============ COPIA DE SEGURIDAD (una línea por elemento, para no llenar la memoria) ============ */
+const b64 = (blob)=>new Promise((res,rej)=>{ const r = new FileReader(); r.onload = ()=>res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+async function fromB64(s){ return (await fetch(s)).blob(); }
+async function exportBackup(){
+  const t = curTrip();
+  const entries = await entriesOfTrip(tripId);
+  if(!entries.length){ toast("Este viaje está vacío"); return; }
+  const parts = [JSON.stringify({bitacora:2, trip:t, date:new Date().toISOString()})+"\n"];
+  for(let i=0;i<entries.length;i++){
+    busy(`Preparando copia: ${i+1} de ${entries.length}`);
+    const e = entries[i]; const m = {};
+    for(const k of (e.type==="photo"?["full","thumb"]:e.type==="audio"?["audio"]:[])){
+      const b = await dbGet("media", e.id+":"+k); if(b) m[k] = await b64(b);
+    }
+    const c = Object.assign({}, e); delete c.id;
+    parts.push(JSON.stringify({e:c, m})+"\n");
+  }
+  busy(null);
+  const file = new Blob(parts, {type:"text/plain"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(file);
+  a.download = `${t.name.replace(/[^\wáéíóúñ -]/gi,"").trim()||"viaje"} ${dayKey(new Date())}.bitacora`;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 60000);
+  localStorage.setItem("bv2_backup", String(Date.now()));
+  toast("Copia descargada. Guardala en Drive o en la PC."); render();
+}
+$("inRestore").onchange = async (ev)=>{
+  const f = ev.target.files[0]; ev.target.value = ""; if(!f) return;
+  try{
+    const reader = f.stream().pipeThrough(new TextDecoderStream()).getReader();
+    let buf = "", head = null, n = 0, newTrip = null;
+    async function line(l){
+      if(!l.trim()) return;
+      const o = JSON.parse(l);
+      if(!head){
+        head = o; if(!o.bitacora) throw new Error("no es una copia de la bitácora");
+        newTrip = {id:"t"+Date.now(), name:o.trip.name + (trips.some(t=>t.name===o.trip.name)?" (copia)":""), created:new Date().toISOString()};
+        await dbPut("trips", newTrip); return;
+      }
+      const media = {}; for(const k in o.m) media[k] = await fromB64(o.m[k]);
+      o.e.tripId = newTrip.id;
+      await saveEntryWithMedia(o.e, media);
+      n++; busy(`Restaurando: ${n} elementos`);
+    }
+    busy("Restaurando...");
+    for(;;){
+      const {done, value} = await reader.read();
+      if(value) buf += value;
+      let i;
+      while((i = buf.indexOf("\n")) >= 0){ const l = buf.slice(0,i); buf = buf.slice(i+1); await line(l); }
+      if(done){ await line(buf); break; }
+    }
+    busy(null);
+    await loadTrips(); tripId = newTrip.id; localStorage.setItem("bv2_trip", tripId); openDays.clear(); render();
+    toast(`Restaurado: ${n} elementos`);
+  }catch(err){ busy(null); toast("No se pudo restaurar: "+err.message); }
+};
+
+/* ============ ARRANQUE ============ */
+async function start(){
+  try{
+    await openDB();
+    await loadTrips();
+    if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(()=>{});
+    oldInfo = await checkOld();
+    await render();
+  }catch(err){
+    $("main").innerHTML = `<div class="empty"><span class="big">⚠️</span>No se pudo abrir el almacenamiento del navegador.<br><small>${esc(err.message)}</small></div>`;
+  }
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
+start();
+})();
+</script>
+</body>
+</html>
